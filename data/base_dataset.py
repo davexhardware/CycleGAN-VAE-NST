@@ -5,8 +5,9 @@ It also includes common transformation functions (e.g., get_transform, __scale_w
 import random
 import numpy as np
 import torch.utils.data as data
+from torch import float16,float32,uint8
 from PIL import Image
-import torchvision.transforms as transforms
+import torchvision.transforms.v2 as transforms
 from abc import ABC, abstractmethod
 
 
@@ -104,7 +105,8 @@ def get_transform(opt, params=None, grayscale=False, method=transforms.Interpola
             transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
 
     if convert:
-        transform_list += [transforms.ToTensor()]
+        #transform_list += [transforms.ToTensor()]
+        transform_list.extend([transforms.ToImage(), transforms.ToDtype(float32, scale=True)])
         if grayscale:
             transform_list += [transforms.Normalize((0.5,), (0.5,))]
         else:
