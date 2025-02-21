@@ -3,6 +3,8 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
+from torch.autograd import Variable
+import math
 
 
 ###############################################################################
@@ -117,7 +119,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
     return net
 
 
-def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
+def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[],latent_dim=None,img_size=None):
     """Create a generator
 
     Parameters:
@@ -146,7 +148,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     """
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
-
+    ngpu=len(gpu_ids)
     if netG == 'resnet_9blocks':
         net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
     elif netG == 'resnet_6blocks':
@@ -155,6 +157,8 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net = UnetGenerator(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'unet_256':
         net = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
+    elif netG== 'VAEGAN':
+        net = VAEGenerator(input_nc, ngf, img_size, ngpu, latent_dim)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
@@ -614,3 +618,139 @@ class PixelDiscriminator(nn.Module):
     def forward(self, input):
         """Standard forward."""
         return self.net(input)
+#/VAE-Cycle-GAN/ from https://github.com/xr-Yang/CycleGAN-VAE-for-reid/
+class _Sampler(nn.Module):
+    def __init__(self):
+        super(_Sampler, self).__init__()
+
+    def forward(self, input):
+        mu = input[0]
+        logvar = input[1]
+
+        std = logvar.mul(0.5).exp_()  # calculate the STDEV
+        #if opt.cuda:
+        eps = torch.cuda.FloatTensor(std.size()).normal_()  # random normalized noise
+        #else:
+            #eps = torch.FloatTensor(std.size()).normal_()  # random normalized noise, normal_(mean=0, std=1, *, generator=None)
+        eps = Variable(eps)
+        return eps.mul(std).add_(mu)  # z = mu + std*epsilon ~ N(mu, std)
+
+
+class _Encoder(nn.Module):
+    def __init__(self, imageSizeLog, ngf, nz, nc):
+        """VAE Encoder constructor, build the encoder network as a convolutional neural network, 
+        with batch-normalization and re-lu for all the intermediate layers, only relu for the first
+        convolutional layer while last layer is composed of 2 convolutional layers, one for mu and one for variance.
+        
+
+        Args:
+            imageSizeLog (int): log2 of image size in pixels
+            ngf (int): number of filters of the last conv layer
+            nz (int): latent space dimension
+            nc (int): number of channels of the input image
+        """
+        super(_Encoder, self).__init__()
+        self.ngf = ngf
+        self.nc = nc
+        self.nz = nz
+        
+        # Last 2 convolutions, from a number of channels of ngf * 2 ** (imageSizeLog - 3) to nz (latent dimension), with a 4*4 filter (16 pixels)
+        self.conv1 = nn.Conv2d(ngf * 2 ** (imageSizeLog - 3), nz, 4)
+        self.conv2 = nn.Conv2d(ngf * 2 ** (imageSizeLog - 3), nz, 4)
+
+        self.encoder = nn.Sequential()
+        # input is (nc) x w x h
+        self.encoder.add_module('input-conv', nn.Conv2d(nc, ngf, 4, 2, 1, bias=False))
+        self.encoder.add_module('input-relu', nn.LeakyReLU(0.2, inplace=True))
+        for i in range(imageSizeLog - 3):  # i= 0, 1, ..., imageSizeLog-2
+            # state size. (ngf) x 32 x 32
+            self.encoder.add_module('conv'.format(ngf * 2 ** i, ngf * 2 ** (i + 1)), nn.Conv2d(ngf * 2 ** (i), ngf * 2 ** (i + 1), 4, 2, 1, bias=False))
+            self.encoder.add_module('batchnorm'.format(ngf * 2 ** (i + 1)), nn.BatchNorm2d(ngf * 2 ** (i + 1)))
+            self.encoder.add_module('relu'.format(ngf * 2 ** (i + 1)), nn.LeakyReLU(0.2, inplace=True))
+
+        # state size. (ngf*2**(imageSizeLog-2)) x 4 x 4
+
+    def forward(self, input):
+        output = self.encoder(input)
+        return [self.conv1(output), self.conv2(output)]
+
+class _Decoder(nn.Module):
+    def __init__(self, imageSizeLog, ngf, nz, nc):
+        """VAE Decoder constructor, build the decoder network as a convolutional neural network, 
+        with batch-normalization and re-lu for all the layers except the last one, which is a
+        convolutional layer with tanh (Hyperbolic Tangent) activation function.
+        
+
+        Args:
+            imageSizeLog (int): log2 of image size in pixels
+            ngf (int): number of filters of the last conv layer
+            nz (int): latent space dimension
+            nc (int): number of channels of the input image
+        """
+        super().__init__(_Decoder, self)
+        self.ngf = ngf
+        self.nc = nc
+        self.nz = nz
+        
+        self.decoder = nn.Sequential()  # the G network of DCGAN, input: noise vector Z, output: N x 3 x 64 x 64
+        # input is Z, going into a convolution
+        self.decoder.add_module('input-conv', nn.ConvTranspose2d(nz, ngf * 2 ** (imageSizeLog - 3), 4, 1, 0, bias=False))
+        self.decoder.add_module('input-batchnorm', nn.BatchNorm2d(ngf * 2 ** (imageSizeLog - 3)))
+        self.decoder.add_module('input-relu', nn.LeakyReLU(0.2, inplace=True))
+
+        # state size. (ngf * 2**(n-3)) x 4 x 4
+
+        for i in range(imageSizeLog - 3, 0, -1):  # i = n-3, n-2, ..., 1
+            self.decoder.add_module('conv'.format(ngf * 2 ** i, ngf * 2 ** (i - 1)),
+                                    nn.ConvTranspose2d(ngf * 2 ** i,
+                                                       ngf * 2 ** (i - 1), 4, 2, 1, bias=False))
+            self.decoder.add_module('batchnorm'.format(ngf * 2 ** (i - 1)),
+                                    nn.BatchNorm2d(ngf * 2 ** (i - 1)))
+            self.decoder.add_module('relu'.format(ngf * 2 ** (i - 1)), nn.LeakyReLU(0.2, inplace=True))
+
+        self.decoder.add_module('ouput-conv', nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False))
+        self.decoder.add_module('output-tanh', nn.Tanh())
+        
+    def forward(self, input):
+        return self.decoder(input)
+
+class VAEGenerator(nn.Module):
+    def __init__(self, nc, ngf, imageSize, ngpu, nz):
+        """VAE constructor, build the VAE network as a sequence of the encoder and the decoder networks,
+        using a sampling in Normal distribution to generate the latent space z.
+
+        Args:
+            imageSize (int): image size in pixels
+            ngf (int): number of filters of the last conv layer
+            nz (int): latent space dimension
+            ngpu (int): number of GPUs to use
+            nc (int): number of channels of the input image
+        """
+        super(VAEGenerator, self).__init__()
+        
+        n = math.log2(imageSize)
+        assert n == round(n), 'imageSize must be a power of 2'
+        assert n >= 3, 'imageSize must be at least 8'
+        n = int(n)
+
+        self.ngpu = ngpu
+        self.encoder = _Encoder(n, ngf, nz, nc)
+        self.sampler = _Sampler()
+        self.decoder = _Decoder(n, ngf, nz, nc)
+
+
+    def forward(self, input):
+        if isinstance(input.data, torch.Tensor) and self.ngpu > 1:
+            output = nn.parallel.data_parallel(self.encoder, input, range(self.ngpu))
+            output = nn.parallel.data_parallel(self.sampler, output, range(self.ngpu))
+            output = nn.parallel.data_parallel(self.decoder, output, range(self.ngpu))
+        else:
+            output = self.encoder(input)
+            output = self.sampler(output)
+            output = self.decoder(output)
+        return output
+
+    def make_cuda(self):
+        self.encoder.cuda()
+        self.sampler.cuda()
+        self.decoder.cuda()
