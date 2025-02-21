@@ -1,34 +1,14 @@
 from unaligned_dataset import UnalignedDataset
 from options import train_options
-from torch import save,load,serialization
+from torch import save,load,serialization, Tensor
 from torchvision.tv_tensors import Image
 from torchvision.transforms import functional as F
 from matplotlib import pyplot as plt
 import numpy as np
 import os
-train_pt_floatsize='trainA_pt_16_unnormalized'
+train_pt_floatsize='trainA_pt_16'
 if not os.path.isdir('./datasets/'+train_pt_floatsize):
     os.mkdir('./datasets/'+train_pt_floatsize)
-# Usage: call the function, will move all images without 'inverted' 
-# (or any other filtering feature) in the name from src_dir to dst_dir
-"""def gather_images(src_dir, dst_dir, filter_func=None):
-    if not os.path.exists(dst_dir):
-        os.makedirs(dst_dir)
-    
-    for root, _, fnames in os.walk(src_dir):
-        for fname in fnames:
-            if filter_func and not filter_func(fname):
-                continue
-            src_path = os.path.join(root, fname)
-            dst_path = os.path.join(dst_dir, fname)
-            os.rename(src_path, dst_path)
-
-def filter_images_inverted(fname):
-    return 'inverted' not in fname
-
-src_dir = './Data'
-dst_dir = './op_dataset_merged'
-gather_images(src_dir, dst_dir, filter_images_inverted)"""
 
 ### Usage: python data\iterate_dataset.py --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size 286
 opt = train_options.TrainOptions().parse()
@@ -63,7 +43,9 @@ for root, _, fnames in sorted(os.walk(dir)):
         i+=1
         path = os.path.join(root, fname)
         print(path)
-        pts.append(load(path))
+        ts=load(path)
+        print(f"Shape: {ts.shape}, Min: {ts.min().item()}, Max: {ts.max().item()}")
+        pts.append(ts)
         if i==5:
             break
 show(pts)
