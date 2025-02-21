@@ -32,6 +32,17 @@ def make_dataset(dir, max_dataset_size=float("inf")):
     return images[:min(max_dataset_size, len(images))]
 
 
+def make_dataset_tensors(dir, max_dataset_size=float("inf")):
+    images = []
+    assert os.path.isdir(dir), '%s is not a valid directory' % dir
+
+    for root, _, fnames in sorted(os.walk(dir)):
+        for fname in fnames:
+            path = os.path.join(root, fname)
+            images.append(path)
+    return images[:min(max_dataset_size, len(images))]
+
+
 def default_loader(path):
     return Image.open(path).convert('RGB')
 
