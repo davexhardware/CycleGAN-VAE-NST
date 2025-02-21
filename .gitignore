@@ -1,6 +1,7 @@
 .DS_Store
 debug*
 datasets/trainA*
+datasets/trainB*
 checkpoints/
 results/
 build/
