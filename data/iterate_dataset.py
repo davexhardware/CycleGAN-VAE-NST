@@ -6,11 +6,11 @@ from torchvision.transforms import functional as F
 from matplotlib import pyplot as plt
 import numpy as np
 import os
-train_pt_floatsize='trainA_pt_16'
+train_pt_floatsize='trainA_pt_16_128'
 if not os.path.isdir('./datasets/'+train_pt_floatsize):
     os.mkdir('./datasets/'+train_pt_floatsize)
 
-### Usage: python data\iterate_dataset.py --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size 286
+### Usage: python data\custom_dataset_nst\iterate_dataset.py --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
 opt = train_options.TrainOptions().parse()
 dataset = UnalignedDataset(opt)
 for el in range(dataset.__len__()):
