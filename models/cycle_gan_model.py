@@ -1,5 +1,6 @@
 import torch
 import itertools
+import torch.nn.functional as F
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
@@ -41,6 +42,8 @@ class CycleGANModel(BaseModel):
             parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
             parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
+            parser.add_argument('--lambda_rec', type=float, default=0.5, help='weight for reconstruction loss, only in case of VAE Generators'),
+            parser.add_argument('--lambda_kl', type=float, default=0.5, help='weight for kl loss, only in case of VAE Generators'),
 
         return parser
 
@@ -52,7 +55,7 @@ class CycleGANModel(BaseModel):
         """
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
-        self.loss_names = ['D_A', 'G_A', 'cycle_A', 'idt_A', 'D_B', 'G_B', 'cycle_B', 'idt_B']
+        self.loss_names = ['D_A', 'G_A', 'cycle_A', 'rec_A', 'kl_A', 'idt_A', 'D_B', 'G_B', 'cycle_B','rec_B', 'kl_B', 'idt_B']
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
         visual_names_A = ['real_A', 'fake_B', 'rec_A']
         visual_names_B = ['real_B', 'fake_A', 'rec_B']
@@ -153,6 +156,8 @@ class CycleGANModel(BaseModel):
         lambda_idt = self.opt.lambda_identity
         lambda_A = self.opt.lambda_A
         lambda_B = self.opt.lambda_B
+        lambda_reconstruction = self.opt.lambda_rec
+        lambda_kl = self.opt.lambda_kl
         # Identity loss
         if lambda_idt > 0:
             # G_A should be identity if real_B is fed: ||G_A(B) - B||
@@ -173,8 +178,20 @@ class CycleGANModel(BaseModel):
         self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
+        if self.opt.netG == 'VAEGAN':
+            #Reconstruction loss: is a L2 loss between the real image and the reconstructed image
+            self.loss_rec_A = F.mse_loss(self.fake_B, self.real_A) * lambda_reconstruction * lambda_A
+            self.loss_rec_B = F.mse_loss(self.fake_A, self.real_B) * lambda_reconstruction
+            #KL Loss
+            self.loss_kl_A= self.netG_A.sampler.kl * lambda_kl * lambda_A
+            self.loss_kl_B= self.netG_B.sampler.kl * lambda_kl * lambda_B
+        else:
+            self.loss_rec_A = 0
+            self.loss_rec_B = 0
+            self.loss_kl_A = 0
+            self.loss_kl_B = 0
         # combined loss and calculate gradients
-        self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
+        self.loss_G = self.loss_G_A + self.loss_G_B + self.rec_A + self.rec_B + self.loss_kl_A + self.loss_kl_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
         self.loss_G.backward()
 
     def optimize_parameters(self):
