@@ -687,7 +687,7 @@ class _Decoder(nn.Module):
             nz (int): latent space dimension
             nc (int): number of channels of the input image
         """
-        super().__init__(_Decoder, self)
+        super(_Decoder, self).__init__()
         self.ngf = ngf
         self.nc = nc
         self.nz = nz
