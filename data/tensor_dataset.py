@@ -1,7 +1,7 @@
 import os
 from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset_tensors
-from torch import load, tensor,can_cast, dtype
+from torch import load,can_cast, float32
 import random
 
 class TensorDataset(BaseDataset):
@@ -55,9 +55,9 @@ class TensorDataset(BaseDataset):
         B_path = self.B_paths[index_B]
         A_pt = load(A_path)
         B_pt = load(B_path)
-        if can_cast(A_pt.dtype, 'float32'):
+        if can_cast(A_pt.dtype, float32):
             A_pt=A_pt.float()
-        if can_cast(B_pt.dtype, 'float32'):
+        if can_cast(B_pt.dtype, float32):
             B_pt=B_pt.float()
         # apply image transformation
         #A = self.transform_A(A_img)
