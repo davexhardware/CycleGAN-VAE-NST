@@ -5,7 +5,7 @@ from torch import load
 import random
 
 
-class UnalignedDataset(BaseDataset):
+class TensorDataset(BaseDataset):
     """
     This dataset class can load unaligned/unpaired datasets.
 
