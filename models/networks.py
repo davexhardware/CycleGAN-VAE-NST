@@ -664,9 +664,9 @@ class _Encoder(nn.Module):
         self.encoder.add_module('input-relu', nn.LeakyReLU(0.2, inplace=True))
         for i in range(imageSizeLog - 3):  # i= 0, 1, ..., imageSizeLog-2
             # state size. (ngf) x 32 x 32
-            self.encoder.add_module('conv'.format(ngf * 2 ** i, ngf * 2 ** (i + 1)), nn.Conv2d(ngf * 2 ** (i), ngf * 2 ** (i + 1), 4, 2, 1, bias=False))
-            self.encoder.add_module('batchnorm'.format(ngf * 2 ** (i + 1)), nn.BatchNorm2d(ngf * 2 ** (i + 1)))
-            self.encoder.add_module('relu'.format(ngf * 2 ** (i + 1)), nn.LeakyReLU(0.2, inplace=True))
+            self.encoder.add_module('conv-{}'.format(ngf * 2 ** i, ngf * 2 ** (i + 1)), nn.Conv2d(ngf * 2 ** (i), ngf * 2 ** (i + 1), 4, 2, 1, bias=False))
+            self.encoder.add_module('batchnorm-{}'.format(ngf * 2 ** (i + 1)), nn.BatchNorm2d(ngf * 2 ** (i + 1)))
+            self.encoder.add_module('relu-{}'.format(ngf * 2 ** (i + 1)), nn.LeakyReLU(0.2, inplace=True))
 
         # state size. (ngf*2**(imageSizeLog-2)) x 4 x 4
 
@@ -701,12 +701,12 @@ class _Decoder(nn.Module):
         # state size. (ngf * 2**(n-3)) x 4 x 4
 
         for i in range(imageSizeLog - 3, 0, -1):  # i = n-3, n-2, ..., 1
-            self.decoder.add_module('conv'.format(ngf * 2 ** i, ngf * 2 ** (i - 1)),
+            self.decoder.add_module('conv-{}'.format(ngf * 2 ** i, ngf * 2 ** (i - 1)),
                                     nn.ConvTranspose2d(ngf * 2 ** i,
                                                        ngf * 2 ** (i - 1), 4, 2, 1, bias=False))
-            self.decoder.add_module('batchnorm'.format(ngf * 2 ** (i - 1)),
+            self.decoder.add_module('batchnorm-{}'.format(ngf * 2 ** (i - 1)),
                                     nn.BatchNorm2d(ngf * 2 ** (i - 1)))
-            self.decoder.add_module('relu'.format(ngf * 2 ** (i - 1)), nn.LeakyReLU(0.2, inplace=True))
+            self.decoder.add_module('relu-{}'.format(ngf * 2 ** (i - 1)), nn.LeakyReLU(0.2, inplace=True))
 
         self.decoder.add_module('ouput-conv', nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False))
         self.decoder.add_module('output-tanh', nn.Tanh())
