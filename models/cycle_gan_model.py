@@ -183,8 +183,8 @@ class CycleGANModel(BaseModel):
             self.loss_rec_A = F.mse_loss(self.fake_B, self.real_A) * lambda_reconstruction * lambda_A
             self.loss_rec_B = F.mse_loss(self.fake_A, self.real_B) * lambda_reconstruction * lambda_B
             #KL Loss
-            self.loss_kl_A= self.netG_A.sampler.kl * lambda_kl * lambda_A
-            self.loss_kl_B= self.netG_B.sampler.kl * lambda_kl * lambda_B
+            self.loss_kl_A= self.netG_A.model.sampler.kl * lambda_kl * lambda_A
+            self.loss_kl_B= self.netG_B.model.sampler.kl * lambda_kl * lambda_B
         else:
             self.loss_rec_A = 0
             self.loss_rec_B = 0
