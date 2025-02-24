@@ -147,7 +147,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     The generator has been initialized by <init_net>. It uses RELU for non-linearity.
     """
     net = None
-    ngpu=len(gpu_ids.split(','))
+    ngpu=len(gpu_ids)
     norm_layer = get_norm_layer(norm_type=norm, multigpu=ngpu>1)
     if netG == 'resnet_9blocks':
         net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
