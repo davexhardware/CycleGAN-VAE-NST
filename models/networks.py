@@ -634,6 +634,7 @@ class _Sampler(nn.Module):
         #else:
             #eps = torch.FloatTensor(std.size()).normal_()  # random normalized noise, normal_(mean=0, std=1, *, generator=None)
         eps = Variable(eps)
+        print(f"eps = ${1 + logvar - mu ** 2 - logvar.exp()}")
         self.kl = torch.mean(-0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim = 1), dim = 0)
         print(f"youkl: {self.kl}")
         return eps.mul(std).add_(mu)  # z = mu + std*epsilon ~ N(mu, std)
