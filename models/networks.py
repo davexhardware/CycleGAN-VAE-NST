@@ -630,7 +630,7 @@ class _Sampler(nn.Module):
 
         std = logvar.mul(0.5).exp_()  # calculate the STDEV
         #if opt.cuda:
-        eps = torch.cuda.FloatTensor(std.size()).normal_()  # random normalized noise
+        eps = torch.FloatTensor(std.size()).normal_()  # random normalized noise
         #else:
             #eps = torch.FloatTensor(std.size()).normal_()  # random normalized noise, normal_(mean=0, std=1, *, generator=None)
         eps = Variable(eps)
