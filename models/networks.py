@@ -147,8 +147,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     The generator has been initialized by <init_net>. It uses RELU for non-linearity.
     """
     net = None
-    ngpu=len(gpu_ids)
-    norm_layer = get_norm_layer(norm_type=norm, multigpu=ngpu>1)
+    norm_layer = get_norm_layer(norm_type=norm, multigpu=len(gpu_ids)>1)
     if netG == 'resnet_9blocks':
         net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
     elif netG == 'resnet_6blocks':
@@ -158,7 +157,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     elif netG == 'unet_256':
         net = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG== 'VAEGAN':
-        net = VAEGenerator(input_nc, ngf, img_size, ngpu, latent_dim, norm_layer)
+        net = VAEGenerator(input_nc, ngf, img_size, gpu_ids, latent_dim, norm_layer)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
@@ -620,8 +619,9 @@ class PixelDiscriminator(nn.Module):
         return self.net(input)
 #/VAE-Cycle-GAN/ from https://github.com/xr-Yang/CycleGAN-VAE-for-reid/
 class _Sampler(nn.Module):
-    def __init__(self):
+    def __init__(self,gpu_id):
         super(_Sampler, self).__init__()
+        self.gpu_id=gpu_id
         self.kl=0
 
     def forward(self, input):
@@ -630,7 +630,7 @@ class _Sampler(nn.Module):
 
         std = logvar.mul(0.5).exp_()  # calculate the STDEV
         #if opt.cuda:
-        eps = torch.FloatTensor(std.size()).normal_()  # random normalized noise
+        eps = torch.FloatTensor(std.size()).normal_().to(device=self.gpu_id)  # random normalized noise
         #else:
             #eps = torch.FloatTensor(std.size()).normal_()  # random normalized noise, normal_(mean=0, std=1, *, generator=None)
         eps = Variable(eps)
@@ -717,7 +717,7 @@ class _Decoder(nn.Module):
         return self.decoder(input)
 
 class VAEGenerator(nn.Module):
-    def __init__(self, nc, ngf, imageSize, ngpu, nz, norm_layer=nn.BatchNorm2d):
+    def __init__(self, nc, ngf, imageSize, gpu_ids, nz, norm_layer=nn.BatchNorm2d):
         """VAE constructor, build the VAE network as a sequence of the encoder and the decoder networks,
         using a sampling in Normal distribution to generate the latent space z.
 
@@ -736,14 +736,15 @@ class VAEGenerator(nn.Module):
         assert n >= 3, 'imageSize must be at least 8'
         n = int(n)
 
-        self.ngpu = ngpu
+        self.ngpu = len(gpu_ids)
         self.encoder = _Encoder(n, ngf, nz, nc, norm_layer)
-        self.sampler = _Sampler()
+        self.sampler = _Sampler(gpu_ids[0])
         self.decoder = _Decoder(n, ngf, nz, nc, norm_layer)
 
 
     def forward(self, input):
-        if isinstance(input.data, torch.Tensor) and self.ngpu > 1:
+        if isinstance(input.data, torch.Tensor) and self.ngpu > 1 and False:
+            # non-working
             output = nn.parallel.data_parallel(self.encoder, input, range(self.ngpu))
             output = nn.parallel.data_parallel(self.sampler, output, range(self.ngpu))
             output = nn.parallel.data_parallel(self.decoder, output, range(self.ngpu))
