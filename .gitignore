@@ -6,6 +6,7 @@ checkpoints/
 results/
 build/
 dist/
+*.zip
 *.pt
 *.png
 *.jpg
