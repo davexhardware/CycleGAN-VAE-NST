@@ -42,7 +42,7 @@ class CycleGANModel(BaseModel):
             parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
             parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
-            parser.add_argument('--lambda_rec', type=float, default=0.5, help='weight for reconstruction loss, only in case of VAE Generators'),
+            parser.add_argument('--lambda_rec', type=float, default=0.2, help='weight for reconstruction loss, only in case of VAE Generators'),
             parser.add_argument('--lambda_kl', type=float, default=0.5, help='weight for kl loss, only in case of VAE Generators'),
 
         return parser
@@ -115,9 +115,21 @@ class CycleGANModel(BaseModel):
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG_A(self.real_A)  # G_A(A)
+        if isinstance(self.fake_B, tuple) and len(self.fake_B)>1:
+            self.G_A_mu= self.fake_B[1]
+            self.G_A_logvar= self.fake_B[2]
+            self.fake_B= self.fake_B[0]
         self.rec_A = self.netG_B(self.fake_B)   # G_B(G_A(A))
+        if isinstance(self.rec_A , tuple) and len(self.rec_A )>1:
+            self.rec_A= self.rec_A[0]
         self.fake_A = self.netG_B(self.real_B)  # G_B(B)
+        if isinstance(self.fake_A , tuple) and len(self.fake_A )>1:
+            self.G_B_mu= self.fake_A[1]
+            self.G_B_logvar= self.fake_A[2]
+            self.fake_A= self.fake_A[0]
         self.rec_B = self.netG_A(self.fake_A)   # G_A(G_B(B))
+        if isinstance(self.rec_B , tuple) and len(self.rec_B )>1:
+            self.rec_B= self.rec_B[0]
 
     def backward_D_basic(self, netD, real, fake):
         """Calculate GAN loss for the discriminator
@@ -156,8 +168,6 @@ class CycleGANModel(BaseModel):
         lambda_idt = self.opt.lambda_identity
         lambda_A = self.opt.lambda_A
         lambda_B = self.opt.lambda_B
-        lambda_reconstruction = self.opt.lambda_rec
-        lambda_kl = self.opt.lambda_kl
         # Identity loss
         if lambda_idt > 0:
             # G_A should be identity if real_B is fed: ||G_A(B) - B||
@@ -178,18 +188,8 @@ class CycleGANModel(BaseModel):
         self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
-        if self.opt.netG == 'VAEGAN':
-            #Reconstruction loss: is a L2 loss between the real image and the reconstructed image
-            self.loss_rec_A = F.mse_loss(self.fake_B, self.real_A) * lambda_reconstruction * lambda_A
-            self.loss_rec_B = F.mse_loss(self.fake_A, self.real_B) * lambda_reconstruction * lambda_B
-            #KL Loss
-            self.loss_kl_A= self.netG_A.module.sampler.kl * lambda_kl * lambda_A
-            self.loss_kl_B= self.netG_B.module.sampler.kl * lambda_kl * lambda_B
-        else:
-            self.loss_rec_A = 0
-            self.loss_rec_B = 0
-            self.loss_kl_A = 0
-            self.loss_kl_B = 0
+        self.VAELoss()
+        self.loss_kl_B
         # combined loss and calculate gradients
         self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_rec_A + self.loss_rec_B + self.loss_kl_A + self.loss_kl_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
         self.loss_G.backward()
@@ -209,3 +209,27 @@ class CycleGANModel(BaseModel):
         self.backward_D_A()      # calculate gradients for D_A
         self.backward_D_B()      # calculate graidents for D_B
         self.optimizer_D.step()  # update D_A and D_B's weights
+
+    def VAELoss(self):
+        if self.opt.netG=="VAEGAN" or self.opt.netG=="VAE1":
+            lambda_A=self.opt.lambda_A
+            lambda_B=self.opt.lambda_B
+            lambda_reconstruction = self.opt.lambda_rec
+            lambda_kl = self.opt.lambda_kl
+            self.loss_rec_A = F.mse_loss(self.fake_B, self.real_A,'sum') * lambda_reconstruction * lambda_A
+            self.loss_rec_A += F.mse_loss(self.rec_A, self.fake_B,'sum') * lambda_reconstruction * lambda_A
+            self.loss_rec_B = F.mse_loss(self.fake_A, self.real_B,'sum') * lambda_reconstruction * lambda_B
+            self.loss_rec_B += F.mse_loss(self.rec_B, self.fake_A,'sum') * lambda_reconstruction * lambda_B
+        if self.opt.netG=="VAEGAN":
+            self.loss_kl_A= self.netG_A.module.sampler.kl * lambda_kl * lambda_A
+            self.loss_kl_B= self.netG_B.module.sampler.kl * lambda_kl * lambda_B
+        elif self.opt.netG == 'VAE1':
+            self.loss_kl_A = -0.5 * torch.mean(torch.mean(1 + self.G_A_logvar - self.G_A_mu.pow(2) - self.G_A_logvar.exp(), 1))
+            self.loss_kl_B = -0.5 * torch.mean(torch.mean(1 + self.G_B_logvar - self.G_B_mu.pow(2) - self.G_B_logvar.exp(), 1))
+        else:
+            self.loss_kl_A=0
+            self.loss_kl_B=0
+            self.loss_rec_A=0
+            self.loss_rec_B=0
+            
+               

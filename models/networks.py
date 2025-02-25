@@ -158,6 +158,8 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG== 'VAEGAN':
         net = VAEGenerator(input_nc, ngf, img_size, gpu_ids, latent_dim, norm_layer)
+    elif netG== 'VAE1':
+        net =VAE(latent_dim,channels=input_nc,img_size=img_size,norm_layer=norm_layer)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
@@ -617,7 +619,7 @@ class PixelDiscriminator(nn.Module):
     def forward(self, input):
         """Standard forward."""
         return self.net(input)
-#/VAE-Cycle-GAN/ from https://github.com/xr-Yang/CycleGAN-VAE-for-reid/
+# /VAE-Cycle-GAN/ from https://github.com/xr-Yang/CycleGAN-VAE-for-reid/
 class _Sampler(nn.Module):
     def __init__(self,gpu_id):
         super(_Sampler, self).__init__()
@@ -634,7 +636,6 @@ class _Sampler(nn.Module):
         #else:
             #eps = torch.FloatTensor(std.size()).normal_()  # random normalized noise, normal_(mean=0, std=1, *, generator=None)
         eps = Variable(eps)
-        print(f"eps = ${1 + logvar - mu ** 2 - logvar.exp()}")
         self.kl = torch.mean(-0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim = 1), dim = 0)
         print(f"youkl: {self.kl}")
         return eps.mul(std).add_(mu)  # z = mu + std*epsilon ~ N(mu, std)
@@ -760,3 +761,104 @@ class VAEGenerator(nn.Module):
         self.encoder.cuda()
         self.sampler.cuda()
         self.decoder.cuda()
+        
+# Copyright 2019 Stanislav Pidhorskyi
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#  http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+import torch
+from torch import nn
+from torch.nn import functional as F
+
+
+class VAE(nn.Module):
+    def __init__(self, zsize, layer_count=3, channels=3, img_size=128, norm_layer=nn.BatchNorm2d):
+        super(VAE, self).__init__()
+        self.d = img_size
+        self.zsize = zsize
+        self.norm_layer=norm_layer
+
+        self.layer_count = layer_count
+
+        mul = 1
+        inputs = channels
+        for i in range(self.layer_count):
+            setattr(self, "conv%d" % (i + 1), nn.Conv2d(inputs, self.d * mul, 4, 2, 1))
+            setattr(self, "conv%d_bn" % (i + 1), self.norm_layer(self.d * mul))
+            inputs = self.d * mul
+            mul *= 2
+
+        self.d_max = inputs
+
+        self.fc1 = nn.Linear(inputs * 4 * 4, zsize)
+        self.fc2 = nn.Linear(inputs * 4 * 4, zsize)
+
+        self.d1 = nn.Linear(zsize, inputs * 4 * 4)
+
+        mul = inputs // self.d // 2
+
+        for i in range(1, self.layer_count):
+            setattr(self, "deconv%d" % (i + 1), nn.ConvTranspose2d(inputs, self.d * mul, 4, 2, 1))
+            setattr(self, "deconv%d_bn" % (i + 1), self.norm_layer(self.d * mul))
+            inputs = self.d * mul
+            mul //= 2
+
+        setattr(self, "deconv%d" % (self.layer_count + 1), nn.ConvTranspose2d(inputs, channels, 4, 2, 1))
+
+    def encode(self, x):
+        for i in range(self.layer_count):
+            x = F.relu(getattr(self, "conv%d_bn" % (i + 1))(getattr(self, "conv%d" % (i + 1))(x)))
+
+        x = x.view(x.shape[0], self.d_max * 4 * 4)
+        h1 = self.fc1(x)
+        h2 = self.fc2(x)
+        return h1, h2
+
+    def reparameterize(self, mu, logvar):
+        if self.training:
+            std = torch.exp(0.5 * logvar)
+            eps = torch.randn_like(std)
+            return eps.mul(std).add_(mu)
+        else:
+            return mu
+
+    def decode(self, x):
+        x = x.view(x.shape[0], self.zsize)
+        x = self.d1(x)
+        x = x.view(x.shape[0], self.d_max, 4, 4)
+        #x = self.deconv1_bn(x)
+        x = F.leaky_relu(x, 0.2)
+
+        for i in range(1, self.layer_count):
+            x = F.leaky_relu(getattr(self, "deconv%d_bn" % (i + 1))(getattr(self, "deconv%d" % (i + 1))(x)), 0.2)
+
+        x = F.tanh(getattr(self, "deconv%d" % (self.layer_count + 1))(x))
+        return x
+
+    def forward(self, x):
+        mu, logvar = self.encode(x)
+        mu = mu.squeeze()
+        logvar = logvar.squeeze()
+        z = self.reparameterize(mu, logvar)
+        return self.decode(z.view(-1, self.zsize, 1, 1)), mu, logvar
+
+"""    def weight_init(self, mean, std):
+        for m in self._modules:
+            normal_init(self._modules[m], mean, std)
+
+
+def normal_init(m, mean, std):
+    if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d):
+        m.weight.data.normal_(mean, std)
+        m.bias.data.zero_()"""
