@@ -43,7 +43,7 @@ class CycleGANModel(BaseModel):
             parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
             parser.add_argument('--lambda_rec', type=float, default=0.5, help='weight for reconstruction loss, only in case of VAE Generators'),
-            parser.add_argument('--lambda_kl', type=float, default=1.0, help='weight for kl loss, only in case of VAE Generators'),
+            parser.add_argument('--lambda_kl', type=float, default=0.001, help='weight for kl loss, only in case of VAE Generators'),
 
         return parser
 
@@ -93,6 +93,7 @@ class CycleGANModel(BaseModel):
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)  # define GAN loss.
             self.criterionCycle = torch.nn.L1Loss()
             self.criterionIdt = torch.nn.L1Loss()
+            self.reconstructionLoss= torch.nn.MSELoss()
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(itertools.chain(self.netG_A.parameters(), self.netG_B.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(itertools.chain(self.netD_A.parameters(), self.netD_B.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -115,21 +116,22 @@ class CycleGANModel(BaseModel):
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG_A(self.real_A)  # G_A(A)
-        if isinstance(self.fake_B, tuple) and len(self.fake_B)>1:
+        print(self.fake_B.get_device())
+        """if isinstance(self.fake_B, tuple) and len(self.fake_B)>1:
             self.G_A_mu= self.fake_B[1]
             self.G_A_logvar= self.fake_B[2]
-            self.fake_B= self.fake_B[0]
+            self.fake_B= self.fake_B[0]"""
         self.rec_A = self.netG_B(self.fake_B)   # G_B(G_A(A))
-        if isinstance(self.rec_A , tuple) and len(self.rec_A )>1:
-            self.rec_A= self.rec_A[0]
+        """if isinstance(self.rec_A , tuple) and len(self.rec_A )>1:
+            self.rec_A= self.rec_A[0]"""
         self.fake_A = self.netG_B(self.real_B)  # G_B(B)
-        if isinstance(self.fake_A , tuple) and len(self.fake_A )>1:
+        """if isinstance(self.fake_A , tuple) and len(self.fake_A )>1:
             self.G_B_mu= self.fake_A[1]
             self.G_B_logvar= self.fake_A[2]
-            self.fake_A= self.fake_A[0]
+            self.fake_A= self.fake_A[0]"""
         self.rec_B = self.netG_A(self.fake_A)   # G_A(G_B(B))
-        if isinstance(self.rec_B , tuple) and len(self.rec_B )>1:
-            self.rec_B= self.rec_B[0]
+        """if isinstance(self.rec_B , tuple) and len(self.rec_B )>1:
+            self.rec_B= self.rec_B[0]"""
 
     def backward_D_basic(self, netD, real, fake):
         """Calculate GAN loss for the discriminator
@@ -211,20 +213,18 @@ class CycleGANModel(BaseModel):
 
     def VAELoss(self):
         if self.opt.netG=="VAEGAN" or self.opt.netG=="VAE1":
-            lambda_A=self.opt.lambda_A
-            lambda_B=self.opt.lambda_B
             lambda_reconstruction = self.opt.lambda_rec
             lambda_kl = self.opt.lambda_kl
-            self.loss_rec_A = F.mse_loss(self.fake_B, self.real_A,'sum') * lambda_reconstruction * lambda_A
-            self.loss_rec_A += F.mse_loss(self.rec_A, self.fake_B,'sum') * lambda_reconstruction * lambda_A
-            self.loss_rec_B = F.mse_loss(self.fake_A, self.real_B,'sum') * lambda_reconstruction * lambda_B
-            self.loss_rec_B += F.mse_loss(self.rec_B, self.fake_A,'sum') * lambda_reconstruction * lambda_B
+            self.loss_rec_A = self.reconstructionLoss(self.fake_B, self.real_A) * lambda_reconstruction
+            self.loss_rec_A += self.reconstructionLoss(self.rec_A, self.fake_B) * lambda_reconstruction
+            self.loss_rec_B = self.reconstructionLoss(self.fake_A, self.real_B) * lambda_reconstruction
+            self.loss_rec_B += self.reconstructionLoss(self.rec_B, self.fake_A) * lambda_reconstruction
         if self.opt.netG=="VAEGAN":
-            self.loss_kl_A= self.netG_A.module.sampler.kl * lambda_kl * lambda_A
-            self.loss_kl_B= self.netG_B.module.sampler.kl * lambda_kl * lambda_B
+            self.loss_kl_A= self.netG_A.module.sampler.kl * lambda_kl
+            self.loss_kl_B= self.netG_B.module.sampler.kl * lambda_kl
         elif self.opt.netG == 'VAE1':
-            self.loss_kl_A = -0.5 * torch.mean(torch.mean(1 + self.G_A_logvar - self.G_A_mu.pow(2) - self.G_A_logvar.exp(), 1)) * lambda_kl * lambda_A
-            self.loss_kl_B = -0.5 * torch.mean(torch.mean(1 + self.G_B_logvar - self.G_B_mu.pow(2) - self.G_B_logvar.exp(), 1)) * lambda_kl * lambda_B
+            self.loss_kl_A = -0.5 * torch.mean(torch.mean(1 + self.G_A_logvar - self.G_A_mu.pow(2) - self.G_A_logvar.exp(), 1)) * lambda_kl
+            self.loss_kl_B = -0.5 * torch.mean(torch.mean(1 + self.G_B_logvar - self.G_B_mu.pow(2) - self.G_B_logvar.exp(), 1)) * lambda_kl
         else:
             self.loss_kl_A=0
             self.loss_kl_B=0
