@@ -233,19 +233,20 @@ class CycleGANModel(BaseModel):
         # G_A and G_B
         self.set_requires_grad([self.netD_A, self.netD_B], False)  # Ds require no gradients when optimizing Gs
         self.VAELoss()
-        self.optimizer_G[0].zero_grad()  # set G_A gradients to zero
+        self.optimizer_G_A.zero_grad()  # set G_A gradients to zero
         self.backward_G_A()             # calculate gradients for G_A
-        self.optimizer_G[0].step()       # update G_A weights
-        self.optimizer_G[1].zero_grad() # set G_A gradients to zero
+        self.optimizer_G_A.step()       # update G_A weights
+        self.optimizer_G_B.zero_grad() # set G_A gradients to zero
         self.backward_G_B()              # calculate gradients for G_B
-        self.optimizer_G[1].step()      # update G_A weights
+        self.optimizer_G_B.step()      # update G_A weights
         
         # D_A and D_B
         self.set_requires_grad([self.netD_A, self.netD_B], True)
-        self.optimizer_D.zero_grad()   # set D_A and D_B's gradients to zero
+        self.optimizer_D_A.zero_grad()   # set D_A and D_B's gradients to zero
         self.backward_D_A()      # calculate gradients for D_A
+        self.optimizer_D_A.step()  # update D_A's weights
         self.backward_D_B()      # calculate graidents for D_B
-        self.optimizer_D.step()  # update D_A and D_B's weights
+        self.optimizer_D_B.step()  # update D_B's weights
 
     def VAELoss(self):
         if self.opt.netG=="VAEGAN" or self.opt.netG=="VAE1":
