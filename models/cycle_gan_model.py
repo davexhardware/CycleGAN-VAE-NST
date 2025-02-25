@@ -42,8 +42,8 @@ class CycleGANModel(BaseModel):
             parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
             parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
-            parser.add_argument('--lambda_rec', type=float, default=0.2, help='weight for reconstruction loss, only in case of VAE Generators'),
-            parser.add_argument('--lambda_kl', type=float, default=0.5, help='weight for kl loss, only in case of VAE Generators'),
+            parser.add_argument('--lambda_rec', type=float, default=0.5, help='weight for reconstruction loss, only in case of VAE Generators'),
+            parser.add_argument('--lambda_kl', type=float, default=1.0, help='weight for kl loss, only in case of VAE Generators'),
 
         return parser
 
@@ -189,7 +189,6 @@ class CycleGANModel(BaseModel):
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
         self.VAELoss()
-        self.loss_kl_B
         # combined loss and calculate gradients
         self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_rec_A + self.loss_rec_B + self.loss_kl_A + self.loss_kl_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
         self.loss_G.backward()
@@ -224,8 +223,8 @@ class CycleGANModel(BaseModel):
             self.loss_kl_A= self.netG_A.module.sampler.kl * lambda_kl * lambda_A
             self.loss_kl_B= self.netG_B.module.sampler.kl * lambda_kl * lambda_B
         elif self.opt.netG == 'VAE1':
-            self.loss_kl_A = -0.5 * torch.mean(torch.mean(1 + self.G_A_logvar - self.G_A_mu.pow(2) - self.G_A_logvar.exp(), 1))
-            self.loss_kl_B = -0.5 * torch.mean(torch.mean(1 + self.G_B_logvar - self.G_B_mu.pow(2) - self.G_B_logvar.exp(), 1))
+            self.loss_kl_A = -0.5 * torch.mean(torch.mean(1 + self.G_A_logvar - self.G_A_mu.pow(2) - self.G_A_logvar.exp(), 1)) * lambda_kl * lambda_A
+            self.loss_kl_B = -0.5 * torch.mean(torch.mean(1 + self.G_B_logvar - self.G_B_mu.pow(2) - self.G_B_logvar.exp(), 1)) * lambda_kl * lambda_B
         else:
             self.loss_kl_A=0
             self.loss_kl_B=0
