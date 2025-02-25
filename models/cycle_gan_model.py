@@ -236,6 +236,7 @@ class CycleGANModel(BaseModel):
         self.optimizer_G_A.zero_grad()  # set G_A gradients to zero
         self.backward_G_A()             # calculate gradients for G_A
         self.optimizer_G_A.step()       # update G_A weights
+        self.VAELoss()
         self.optimizer_G_B.zero_grad() # set G_A gradients to zero
         self.backward_G_B()              # calculate gradients for G_B
         self.optimizer_G_B.step()      # update G_A weights
