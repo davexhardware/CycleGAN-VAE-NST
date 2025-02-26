@@ -805,10 +805,10 @@ class VAE(nn.Module):
         self.encoder= nn.Sequential()
         inputs = in_channels
         for i in range(len(self.layers)):
-            self.encoder.add_module("conv%d" % (i + 1), nn.Conv2d(inputs, layers[i], 4, 2, 1))
-            self.encoder.add_module("conv%d_bn" % (i + 1), self.norm_layer(layers[i]))
+            self.encoder.add_module("conv%d" % (i + 1), nn.Conv2d(inputs, self.layers[i], 4, 2, 1))
+            self.encoder.add_module("conv%d_bn" % (i + 1), self.norm_layer(self.layers[i]))
             self.encoder.add_module("conv%d_relu" % (i + 1), nn.LeakyReLU(0.2, inplace=True)) 
-            inputs = layers[i]
+            inputs = self.layers[i]
         
         self.fc1 = nn.Linear(inputs * self.d_enc**2, zsize)
         self.fc2 = nn.Linear(inputs * self.d_enc**2, zsize)
