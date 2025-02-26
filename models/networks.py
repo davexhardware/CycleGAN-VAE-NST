@@ -843,7 +843,7 @@ class VAE(nn.Module):
     def decode(self, x):
         x = x.view(x.shape[0], self.zsize)
         x = self.d1(x)
-        x = x.view(x.shape[0], self.layers[-1] * self.d_enc**2)
+        x = x.view(x.shape[0], self.layers[-1], self.d_enc, self.d_enc)
         x= self.decoder.forward(x)
         return x
 
