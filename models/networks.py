@@ -836,7 +836,7 @@ class VAE(nn.Module):
     def decode(self, x):
         x = x.view(x.shape[0], self.zsize)
         x = self.d1(x)
-        x = x.view(x.shape[0], self.d_max, 4, 4)
+        x = x.view(x.shape[0], self.d_max, self.w_enc, self.w_enc)
         #x = self.deconv1_bn(x)
         x = F.leaky_relu(x, 0.2)
 
