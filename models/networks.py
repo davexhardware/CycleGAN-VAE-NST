@@ -791,7 +791,7 @@ class VAE(nn.Module):
         if not layers: # filters (representi features) for each layer
             self.layers=[]
             for i in range(3):
-                self.layers.append(self.d*(i+1))
+                self.layers.append(self.d*2**i)
         else:
             self.layers=layers
         
@@ -818,9 +818,9 @@ class VAE(nn.Module):
         self.decoder= nn.Sequential()
         self.layers.reverse()
         for i in range(1, len(self.layers)):
-            self.decoder.add_module("deconv%d" % (i + 1), nn.ConvTranspose2d(inputs, self.layers[i], 4, 2, 1))
-            self.decoder.add_module("deconv%d_bn" % (i + 1), self.norm_layer(self.layers[i]))
-            self.decoder.add_module("deconv%d_relu" % (i + 1), nn.LeakyReLU(0.2, inplace=True))
+            self.decoder.add_module("deconv%d" % (i), nn.ConvTranspose2d(inputs, self.layers[i], 4, 2, 1))
+            self.decoder.add_module("deconv%d_bn" % (i), self.norm_layer(self.layers[i]))
+            self.decoder.add_module("deconv%d_relu" % (i), nn.LeakyReLU(0.2, inplace=True))
             inputs = self.layers[i]
         self.decoder.add_module("deconv%d_tanh" % (len(self.layers)), nn.Tanh())
         self.layers.reverse()
