@@ -179,7 +179,7 @@ class CycleGANModel(BaseModel):
             # G_B should be identity if real_A is fed: ||G_B(A) - A||
             self.idt_B = self.netG_B(self.real_A)
             if(isinstance(self.idt_B, tuple) and len(self.idt_B)>1):
-                self.idt_B=self.idt
+                self.idt_B=self.idt_B[0]
             self.loss_idt_B = self.criterionIdt(self.idt_B, self.real_A) * lambda_A * lambda_idt
         else:
             self.loss_idt_A = 0
