@@ -818,7 +818,7 @@ class VAE(nn.Module):
     def encode(self, x):
         for i in range(self.layer_count):
             x = F.relu(getattr(self, "conv%d_bn" % (i + 1))(getattr(self, "conv%d" % (i + 1))(x)))
-
+        print(x.shape)
         x = x.view(x.shape[0], self.d_max * 4 * 4)
         h1 = self.fc1(x)
         h2 = self.fc2(x)
