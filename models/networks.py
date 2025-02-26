@@ -159,7 +159,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     elif netG== 'VAEGAN':
         net = VAEGenerator(input_nc, ngf, img_size, gpu_ids, latent_dim, norm_layer)
     elif netG== 'VAE1':
-        net =VAE(latent_dim,channels=input_nc,img_size=img_size,norm_layer=norm_layer)
+        net =VAE(latent_dim,in_channels=input_nc,img_size=img_size,norm_layer=norm_layer)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
@@ -782,44 +782,52 @@ from torch.nn import functional as F
 
 
 class VAE(nn.Module):
-    def __init__(self, zsize, layer_count=3, channels=3, img_size=128, norm_layer=nn.BatchNorm2d):
+    def __init__(self, zsize, layers=None, in_channels=3, img_size=128, norm_layer=nn.BatchNorm2d):
         super(VAE, self).__init__()
         self.d = img_size
+        log_d= math.log2(img_size)
         self.zsize = zsize
         self.norm_layer=norm_layer
+        if not layers: # filters (representi features) for each layer
+            self.layers=[]
+            for i in range(3):
+                self.layers.append(self.d*(i+1))
+        else:
+            self.layers=layers
+        
+        # the convolution of the encoder, with a kernel=4, stride=2, padding=1
+        # has the effect of reducing the size of the image by a factor of 2
+        # so we need to ensure that the number of layers is consistent with the size of the image
+        self.d_enc=2**int(log_d-len(self.layers))
+        
+        assert self.d_enc>2, "The number of layers is not consistent with the size of the image"
+        
+        self.encoder= nn.Sequential()
+        inputs = in_channels
+        for i in range(len(self.layers)):
+            self.encoder.add_module(self, "conv%d" % (i + 1), nn.Conv2d(inputs, layers[i], 4, 2, 1))
+            self.encoder.add_module(self, "conv%d_bn" % (i + 1), self.norm_layer(layers[i]))
+            self.encoder.add_module(self, "conv%d_relu" % (i + 1), nn.LeakyReLU(0.2, inplace=True)) 
+            inputs = layers[i]
+        
+        self.fc1 = nn.Linear(inputs * self.d_enc**2, zsize)
+        self.fc2 = nn.Linear(inputs * self.d_enc**2, zsize)
 
-        self.layer_count = layer_count
+        self.d1 = nn.Linear(zsize, inputs * self.d_enc**2)
 
-        mul = 1
-        inputs = channels
-        for i in range(self.layer_count):
-            setattr(self, "conv%d" % (i + 1), nn.Conv2d(inputs, self.d * mul, 4, 2, 1))
-            setattr(self, "conv%d_bn" % (i + 1), self.norm_layer(self.d * mul))
-            inputs = self.d * mul
-            mul *= 2
-
-        self.d_max = inputs
-        log_n= math.log2(img_size)
-        self.w_enc=2**int(log_n-self.layer_count)
-        self.fc1 = nn.Linear(inputs * self.w_enc * self.w_enc, zsize)
-        self.fc2 = nn.Linear(inputs * self.w_enc * self.w_enc, zsize)
-
-        self.d1 = nn.Linear(zsize, inputs * self.w_enc* self.w_enc)
-
-        mul = inputs // self.d // 2
-
-        for i in range(1, self.layer_count):
-            setattr(self, "deconv%d" % (i + 1), nn.ConvTranspose2d(inputs, self.d * mul, 4, 2, 1))
-            setattr(self, "deconv%d_bn" % (i + 1), self.norm_layer(self.d * mul))
-            inputs = self.d * mul
-            mul //= 2
-
-        setattr(self, "deconv%d" % (self.layer_count + 1), nn.ConvTranspose2d(inputs, channels, 4, 2, 1))
+        self.decoder= nn.Sequential()
+        self.layers.reverse()
+        for i in range(1, len(self.layers)):
+            self.decoder.add_module("deconv%d" % (i + 1), nn.ConvTranspose2d(inputs, self.layers[i], 4, 2, 1))
+            self.decoder.add_module("deconv%d_bn" % (i + 1), self.norm_layer(self.layers[i]))
+            self.decoder.add_module("deconv%d_relu" % (i + 1), nn.LeakyReLU(0.2, inplace=True))
+            inputs = self.layers[i]
+        self.decoder.add_module("deconv%d_tanh" % (len(self.layers)), nn.Tanh())
+        self.layers.reverse()
 
     def encode(self, x):
-        for i in range(self.layer_count):
-            x = F.relu(getattr(self, "conv%d_bn" % (i + 1))(getattr(self, "conv%d" % (i + 1))(x)))
-        x = x.view(x.shape[0], self.d_max * self.w_enc * self.w_enc)
+        x=self.encoder.forward(x)
+        x = x.view(x.shape[0], self.layers[-1] * self.d_enc**2)
         h1 = self.fc1(x)
         h2 = self.fc2(x)
         return h1, h2
@@ -835,14 +843,8 @@ class VAE(nn.Module):
     def decode(self, x):
         x = x.view(x.shape[0], self.zsize)
         x = self.d1(x)
-        x = x.view(x.shape[0], self.d_max, self.w_enc, self.w_enc)
-        #x = self.deconv1_bn(x)
-        x = F.leaky_relu(x, 0.2)
-
-        for i in range(1, self.layer_count):
-            x = F.leaky_relu(getattr(self, "deconv%d_bn" % (i + 1))(getattr(self, "deconv%d" % (i + 1))(x)), 0.2)
-
-        x = F.tanh(getattr(self, "deconv%d" % (self.layer_count + 1))(x))
+        x = x.view(x.shape[0], self.layers[-1] * self.d_enc**2)
+        x= self.decoder.forward(x)
         return x
 
     def forward(self, x):
@@ -852,6 +854,10 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z.view(-1, self.zsize, 1, 1)), mu, logvar
 
+    def make_cuda(self):
+        self.encoder.cuda()
+        self.decoder.cuda()
+        
 """    def weight_init(self, mean, std):
         for m in self._modules:
             normal_init(self._modules[m], mean, std)
