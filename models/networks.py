@@ -789,9 +789,7 @@ class VAE(nn.Module):
         self.zsize = zsize
         self.norm_layer=norm_layer
         if not layers: # filters (representi features) for each layer
-            self.layers=[]
-            for i in range(3):
-                self.layers.append(self.d*2**i)
+            self.layers=[64,128,256,512]
         else:
             self.layers=layers
         
@@ -822,6 +820,7 @@ class VAE(nn.Module):
             self.decoder.add_module("deconv%d_bn" % (i), self.norm_layer(self.layers[i]))
             self.decoder.add_module("deconv%d_relu" % (i), nn.LeakyReLU(0.2, inplace=True))
             inputs = self.layers[i]
+        self.decoder.add_module("deconv%d" % (len(self.layers)), nn.ConvTranspose2d(inputs, in_channels, 4, 2, 1))
         self.decoder.add_module("deconv%d_tanh" % (len(self.layers)), nn.Tanh())
         self.layers.reverse()
 
