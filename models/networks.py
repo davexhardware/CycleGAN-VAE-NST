@@ -799,11 +799,12 @@ class VAE(nn.Module):
             mul *= 2
 
         self.d_max = inputs
+        log_n= math.log2(img_size)
+        self.w_enc=2**int(log_n-self.layer_count)
+        self.fc1 = nn.Linear(inputs * self.w_enc * self.w_enc, zsize)
+        self.fc2 = nn.Linear(inputs * self.w_enc * self.w_enc, zsize)
 
-        self.fc1 = nn.Linear(inputs * 4 * 4, zsize)
-        self.fc2 = nn.Linear(inputs * 4 * 4, zsize)
-
-        self.d1 = nn.Linear(zsize, inputs * 4 * 4)
+        self.d1 = nn.Linear(zsize, inputs * self.w_enc* self.w_enc)
 
         mul = inputs // self.d // 2
 
@@ -819,7 +820,7 @@ class VAE(nn.Module):
         for i in range(self.layer_count):
             x = F.relu(getattr(self, "conv%d_bn" % (i + 1))(getattr(self, "conv%d" % (i + 1))(x)))
         print(x.shape)
-        x = x.view(x.shape[0], self.d_max * 4 * 4)
+        x = x.view(x.shape[0], self.d_max * self.w_enc * self.w_enc)
         h1 = self.fc1(x)
         h2 = self.fc2(x)
         return h1, h2
