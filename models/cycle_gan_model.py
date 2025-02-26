@@ -117,21 +117,21 @@ class CycleGANModel(BaseModel):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG_A(self.real_A)  # G_A(A)
         print(self.fake_B.get_device())
-        """if isinstance(self.fake_B, tuple) and len(self.fake_B)>1:
+        if isinstance(self.fake_B, tuple) and len(self.fake_B)>1:
             self.G_A_mu= self.fake_B[1]
             self.G_A_logvar= self.fake_B[2]
-            self.fake_B= self.fake_B[0]"""
+            self.fake_B= self.fake_B[0]
         self.rec_A = self.netG_B(self.fake_B)   # G_B(G_A(A))
-        """if isinstance(self.rec_A , tuple) and len(self.rec_A )>1:
-            self.rec_A= self.rec_A[0]"""
+        if isinstance(self.rec_A , tuple) and len(self.rec_A )>1:
+            self.rec_A= self.rec_A[0]
         self.fake_A = self.netG_B(self.real_B)  # G_B(B)
-        """if isinstance(self.fake_A , tuple) and len(self.fake_A )>1:
+        if isinstance(self.fake_A , tuple) and len(self.fake_A )>1:
             self.G_B_mu= self.fake_A[1]
             self.G_B_logvar= self.fake_A[2]
-            self.fake_A= self.fake_A[0]"""
+            self.fake_A= self.fake_A[0]
         self.rec_B = self.netG_A(self.fake_A)   # G_A(G_B(B))
-        """if isinstance(self.rec_B , tuple) and len(self.rec_B )>1:
-            self.rec_B= self.rec_B[0]"""
+        if isinstance(self.rec_B , tuple) and len(self.rec_B )>1:
+            self.rec_B= self.rec_B[0]
 
     def backward_D_basic(self, netD, real, fake):
         """Calculate GAN loss for the discriminator
