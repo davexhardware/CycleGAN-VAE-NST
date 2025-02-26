@@ -848,6 +848,7 @@ class VAE(nn.Module):
         return x
 
     def forward(self, x):
+        print(x.shape)
         mu, logvar = self.encode(x)
         mu = mu.squeeze()
         logvar = logvar.squeeze()
