@@ -97,12 +97,12 @@ class CycleGANModel(BaseModel):
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G_A = torch.optim.Adam(self.netG_A.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_G_B = torch.optim.Adam(self.netG_B.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+            self.optimizer_G = [self.optimizer_G_A, self.optimizer_G_B]
             self.optimizer_D_A = torch.optim.Adam(self.netD_A.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D_B = torch.optim.Adam(self.netD_B.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-            self.optimizers.append(self.optimizer_G_A)
-            self.optimizers.append(self.optimizer_G_B)
-            self.optimizers.append(self.optimizer_D_A)
-            self.optimizers.append(self.optimizer_D_B)
+            self.optimizer_D = [self.optimizer_D_A, self.optimizer_D_B]
+            self.optimizers.append(self.optimizer_G)
+            self.optimizers.append(self.optimizer_D)
 
     def set_input(self, input):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
