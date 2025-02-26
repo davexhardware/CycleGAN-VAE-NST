@@ -120,6 +120,7 @@ class CycleGANModel(BaseModel):
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG_A(self.real_A)  # G_A(A)
+        print(self.fake_B.get_device())
         """if isinstance(self.fake_B, tuple) and len(self.fake_B)>1:
             self.G_A_mu= self.fake_B[1]
             self.G_A_logvar= self.fake_B[2]
