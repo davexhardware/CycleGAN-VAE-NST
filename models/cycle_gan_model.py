@@ -195,7 +195,7 @@ class CycleGANModel(BaseModel):
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
         # combined loss and calculate gradients
         self.loss_G_A = self.ganloss_G_A + self.loss_rec_A +  self.loss_kl_A + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A 
-        self.loss_G_A.backward(retain_graph=True)
+        self.loss_G_A.backward()
 
     def backward_G_B(self):
             """Calculate the loss for generator G_A"""
@@ -224,7 +224,7 @@ class CycleGANModel(BaseModel):
             self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
             # combined loss and calculate gradients
             self.loss_G_B = self.ganloss_G_B + self.loss_rec_B +  self.loss_kl_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_B 
-            self.loss_G_B.backward(retain_graph=True)
+            self.loss_G_B.backward()
 
     def optimize_parameters(self):
         """Calculate losses, gradients, and update network weights; called in every training iteration"""
