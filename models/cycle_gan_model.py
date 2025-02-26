@@ -190,11 +190,11 @@ class CycleGANModel(BaseModel):
         # GAN loss D_B(G_B(B))
         #self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
         # Forward cycle loss || G_B(G_A(A)) - A||
-        #self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
+        self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
         # Backward cycle loss || G_A(G_B(B)) - B||
-        #self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
+        self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
         # combined loss and calculate gradients
-        self.loss_G_A = self.ganloss_G_A + self.loss_rec_A +  self.loss_kl_A + self.loss_idt_A#+ self.loss_cycle_A + self.loss_cycle_B 
+        self.loss_G_A = self.ganloss_G_A + self.loss_rec_A +  self.loss_kl_A + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A 
         self.loss_G_A.backward(retain_graph=True)
 
     def backward_G_B(self):
@@ -219,11 +219,11 @@ class CycleGANModel(BaseModel):
             # GAN loss D_B(G_B(B))
             self.ganloss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
             # Forward cycle loss || G_B(G_A(A)) - A||
-            #self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
+            self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
             # Backward cycle loss || G_A(G_B(B)) - B||
-            #self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
+            self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
             # combined loss and calculate gradients
-            self.loss_G_B = self.ganloss_G_B + self.loss_rec_B +  self.loss_kl_B + self.loss_idt_B  #+ self.loss_cycle_A + self.loss_cycle_B 
+            self.loss_G_B = self.ganloss_G_B + self.loss_rec_B +  self.loss_kl_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_B 
             self.loss_G_B.backward(retain_graph=True)
 
     def optimize_parameters(self):
