@@ -95,12 +95,8 @@ class CycleGANModel(BaseModel):
             self.criterionIdt = torch.nn.L1Loss()
             self.reconstructionLoss= torch.nn.MSELoss()
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
-            self.optimizer_G_A = torch.optim.Adam(self.netG_A.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-            self.optimizer_G_B = torch.optim.Adam(self.netG_B.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-            self.optimizer_G = [self.optimizer_G_A, self.optimizer_G_B]
-            self.optimizer_D_A = torch.optim.Adam(self.netD_A.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-            self.optimizer_D_B = torch.optim.Adam(self.netD_B.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-            self.optimizer_D = [self.optimizer_D_A, self.optimizer_D_B]
+            self.optimizer_G = torch.optim.Adam(itertools.chain(self.netG_A.parameters(), self.netG_B.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
+            self.optimizer_D = torch.optim.Adam(itertools.chain(self.netD_A.parameters(), self.netD_B.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizers.append(self.optimizer_G)
             self.optimizers.append(self.optimizer_D)
 
@@ -168,8 +164,8 @@ class CycleGANModel(BaseModel):
         fake_A = self.fake_A_pool.query(self.fake_A)
         self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A, fake_A)
 
-    def backward_G_A(self):
-        """Calculate the loss for generator G_A"""
+    def backward_G(self):
+        """Calculate the loss for generators G_A and G_B"""
         lambda_idt = self.opt.lambda_identity
         lambda_A = self.opt.lambda_A
         lambda_B = self.opt.lambda_B
@@ -178,53 +174,25 @@ class CycleGANModel(BaseModel):
             # G_A should be identity if real_B is fed: ||G_A(B) - B||
             self.idt_A = self.netG_A(self.real_B)
             self.loss_idt_A = self.criterionIdt(self.idt_A, self.real_B) * lambda_B * lambda_idt
-            """ # G_B should be identity if real_A is fed: ||G_B(A) - A||
-                self.idt_B = self.netG_B(self.real_A)
-                self.loss_idt_B = self.criterionIdt(self.idt_B, self.real_A) * lambda_A * lambda_idt"""
+            # G_B should be identity if real_A is fed: ||G_B(A) - A||
+            self.idt_B = self.netG_B(self.real_A)
+            self.loss_idt_B = self.criterionIdt(self.idt_B, self.real_A) * lambda_A * lambda_idt
         else:
             self.loss_idt_A = 0
-            #self.loss_idt_B = 0
+            self.loss_idt_B = 0
 
         # GAN loss D_A(G_A(A))
-        self.ganloss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
+        self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
         # GAN loss D_B(G_B(B))
-        #self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
+        self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
         # Forward cycle loss || G_B(G_A(A)) - A||
         self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
+        self.VAELoss()
         # combined loss and calculate gradients
-        self.loss_G_A = self.ganloss_G_A + self.loss_rec_A +  self.loss_kl_A + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A 
-        self.loss_G_A.backward()
-
-    def backward_G_B(self):
-            """Calculate the loss for generator G_A"""
-            lambda_idt = self.opt.lambda_identity
-            lambda_A = self.opt.lambda_A
-            lambda_B = self.opt.lambda_B
-            # Identity loss
-            if lambda_idt > 0:
-                """# G_A should be identity if real_B is fed: ||G_A(B) - B||
-                self.idt_A = self.netG_A(self.real_B)
-                self.loss_idt_A = self.criterionIdt(self.idt_A, self.real_B) * lambda_B * lambda_idt"""
-                # G_B should be identity if real_A is fed: ||G_B(A) - A||
-                self.idt_B = self.netG_B(self.real_A)
-                self.loss_idt_B = self.criterionIdt(self.idt_B, self.real_A) * lambda_A * lambda_idt
-            else:
-                #self.loss_idt_A = 0
-                self.loss_idt_B = 0
-
-            # GAN loss D_A(G_A(A))
-            #self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
-            # GAN loss D_B(G_B(B))
-            self.ganloss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
-            # Forward cycle loss || G_B(G_A(A)) - A||
-            self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
-            # Backward cycle loss || G_A(G_B(B)) - B||
-            self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
-            # combined loss and calculate gradients
-            self.loss_G_B = self.ganloss_G_B + self.loss_rec_B +  self.loss_kl_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_B 
-            self.loss_G_B.backward()
+        self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_rec_A + self.loss_rec_B + self.loss_kl_A + self.loss_kl_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
+        self.loss_G.backward()
 
     def optimize_parameters(self):
         """Calculate losses, gradients, and update network weights; called in every training iteration"""
@@ -232,14 +200,9 @@ class CycleGANModel(BaseModel):
         self.forward()      # compute fake images and reconstruction images.
         # G_A and G_B
         self.set_requires_grad([self.netD_A, self.netD_B], False)  # Ds require no gradients when optimizing Gs
-        self.VAELoss()
-        self.optimizer_G[0].zero_grad()  # set G_A gradients to zero
-        self.backward_G_A()             # calculate gradients for G_A
-        self.optimizer_G[0].step()       # update G_A weights
-        self.optimizer_G[1].zero_grad() # set G_A gradients to zero
-        self.backward_G_B()              # calculate gradients for G_B
-        self.optimizer_G[1].step()      # update G_A weights
-        
+        self.optimizer_G.zero_grad()  # set G_A and G_B's gradients to zero
+        self.backward_G()             # calculate gradients for G_A and G_B
+        self.optimizer_G.step()       # update G_A and G_B's weights
         # D_A and D_B
         self.set_requires_grad([self.netD_A, self.netD_B], True)
         self.optimizer_D.zero_grad()   # set D_A and D_B's gradients to zero
@@ -252,9 +215,9 @@ class CycleGANModel(BaseModel):
             lambda_reconstruction = self.opt.lambda_rec
             lambda_kl = self.opt.lambda_kl
             self.loss_rec_A = self.reconstructionLoss(self.fake_B, self.real_A) * lambda_reconstruction
-            self.loss_rec_B = self.reconstructionLoss(self.rec_A, self.fake_B) * lambda_reconstruction
-            self.loss_rec_B += self.reconstructionLoss(self.fake_A, self.real_B) * lambda_reconstruction
-            self.loss_rec_A += self.reconstructionLoss(self.rec_B, self.fake_A) * lambda_reconstruction
+            self.loss_rec_A += self.reconstructionLoss(self.rec_A, self.fake_B) * lambda_reconstruction
+            self.loss_rec_B = self.reconstructionLoss(self.fake_A, self.real_B) * lambda_reconstruction
+            self.loss_rec_B += self.reconstructionLoss(self.rec_B, self.fake_A) * lambda_reconstruction
         if self.opt.netG=="VAEGAN":
             self.loss_kl_A= self.netG_A.module.sampler.kl * lambda_kl
             self.loss_kl_B= self.netG_B.module.sampler.kl * lambda_kl
