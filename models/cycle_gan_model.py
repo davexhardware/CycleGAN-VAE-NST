@@ -194,7 +194,7 @@ class CycleGANModel(BaseModel):
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
         # combined loss and calculate gradients
-        self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_rec + self.loss_kl + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
+        self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_rec_A + self.loss_rec_B + self.loss_kl_A + self.loss_kl_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
         self.loss_G.backward()
 
     def optimize_parameters(self):
@@ -218,18 +218,20 @@ class CycleGANModel(BaseModel):
         if self.opt.netG=="VAEGAN" or self.opt.netG=="VAE1":
             lambda_reconstruction = self.opt.lambda_rec
             lambda_kl = self.opt.lambda_kl
-            self.loss_rec = self.reconstructionLoss(self.fake_B, self.real_A) * lambda_reconstruction
-            self.loss_rec += self.reconstructionLoss(self.rec_A, self.fake_B) * lambda_reconstruction
-            self.loss_rec += self.reconstructionLoss(self.fake_A, self.real_B) * lambda_reconstruction
-            self.loss_rec += self.reconstructionLoss(self.rec_B, self.fake_A) * lambda_reconstruction
+            self.loss_rec_A = self.reconstructionLoss(self.fake_B, self.real_A) * lambda_reconstruction
+            self.loss_rec_A += self.reconstructionLoss(self.rec_A, self.fake_B) * lambda_reconstruction
+            self.loss_rec_B = self.reconstructionLoss(self.fake_A, self.real_B) * lambda_reconstruction
+            self.loss_rec_B += self.reconstructionLoss(self.rec_B, self.fake_A) * lambda_reconstruction
         if self.opt.netG=="VAEGAN":
-            self.loss_kl = self.netG_A.module.sampler.kl * lambda_kl
-            self.loss_kl += self.netG_B.module.sampler.kl * lambda_kl
+            self.loss_kl_A= self.netG_A.module.sampler.kl * lambda_kl
+            self.loss_kl_B= self.netG_B.module.sampler.kl * lambda_kl
         elif self.opt.netG == 'VAE1':
-            self.loss_kl = -0.5 * torch.mean(torch.mean(1 + self.G_A_logvar - self.G_A_mu.pow(2) - self.G_A_logvar.exp(), 1)) * lambda_kl
-            self.loss_kl += -0.5 * torch.mean(torch.mean(1 + self.G_B_logvar - self.G_B_mu.pow(2) - self.G_B_logvar.exp(), 1)) * lambda_kl
+            self.loss_kl_A = -0.5 * torch.mean(torch.mean(1 + self.G_A_logvar - self.G_A_mu.pow(2) - self.G_A_logvar.exp(), 1)) * lambda_kl
+            self.loss_kl_B = -0.5 * torch.mean(torch.mean(1 + self.G_B_logvar - self.G_B_mu.pow(2) - self.G_B_logvar.exp(), 1)) * lambda_kl
         else:
-            self.loss_kl=0
-            self.loss_rec=0
+            self.loss_kl_A=0
+            self.loss_kl_B=0
+            self.loss_rec_A=0
+            self.loss_rec_B=0
             
                
