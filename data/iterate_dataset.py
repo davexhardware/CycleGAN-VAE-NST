@@ -98,4 +98,6 @@ for folder in folders:
         print(f'No such directory: {pt_folder}')
         exit()
 
-print('Done')
+print('Done. Tensors of the images have been saved in the respective folders.')
+print('In order to train the model, substitute the trainA and trainB folders with the tensors of the images you want to use as domain A and B.')
+exit()
