@@ -20,8 +20,10 @@ def show(imgs):
     input()
                 
 
-# Copies the image files from the folders in <src_root>/[<folders>] temporarly inside
-# the <dataroot>/trainA folder, then saves the images as tensor files in <dataroot>/<folders>_pt
+""" Copies the image files from the folders in <src_root>/[<folders>] **temporarly** inside the 
+ <dataroot>/trainA folder, then saves the images as tensor files in <dataroot>/<folders>_pt.
+ In order to use the tensors for training the model, you should replace the newly created folders
+ with trainA and trainB in the <dataroot> directory."""
 
 ### Usage: python data\iterate_dataset.py --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
 opt = train_options.TrainOptions().parse()
@@ -46,6 +48,7 @@ for folder in folders:
                 for name in dirs:
                     os.rmdir(os.path.join(root, name))
                 os.rmdir(src_dir)
+        # STOP COMMENTING
         if not os.path.exists(src_dir):
             src_dir = os.path.join(dataset_dir, 'trainA')
             os.makedirs(src_dir, exist_ok=True)
