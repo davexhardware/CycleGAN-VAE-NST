@@ -1,7 +1,7 @@
 from data.custom_dataset_nst.scripts import holdout, download_from_kaggle
 
-ds_dir = 'C:\\Users\\vitod\\Datasets\\celeba\\img_align_celeba\\img_align_celeba'
-working_dir = '../celeba'
+ds_dir = 'C:\\Users\\DavideSavoia\\Documents\\DeepProj\\CycleGAN-VAE-NST\\celeba\\celeba'
+working_dir = './celeba'
 
 
 def download_dataset(path):
@@ -9,3 +9,4 @@ def download_dataset(path):
         path=path,
         ds_name='jessicali9530/celeba-dataset'
     )
+download_dataset(ds_dir)

@@ -5,6 +5,7 @@ datasets/trainB*
 checkpoints/
 results/
 build/
+celeba/
 dist/
 *.zip
 *.pt

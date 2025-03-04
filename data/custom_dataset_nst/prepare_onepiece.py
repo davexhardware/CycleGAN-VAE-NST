@@ -3,16 +3,17 @@ from pathlib import Path
 from data.custom_dataset_nst.scripts import holdout
 
 # TODO: set the path to the downloaded dataset
-ds_dir_original = Path('C:\\Users\\vitod\\Datasets\\onepiece\\Data\\Data')
+ds_dir_original = Path('C:\\Users\\DavideSavoia\\OneDrive - Politecnico di Bari\\1M\\DeepL\\progetto\\One Piece dataset\\Data')
 # TODO: set the path to the directory where the flattened dataset will be stored
-ds_dir_flat = Path('C:\\Users\\vitod\\Datasets\\onepiece\\Flatten_data')
+ds_dir_flat = Path('C:\\Users\\DavideSavoia\\Documents\\DeepProj\\CycleGAN-VAE-NST\\celeba\\onepiece')
 # TODO: set the path to the working directory
-working_dir = Path('../onepiece')
+working_dir = Path('C:\\Users\\DavideSavoia\\Documents\\DeepProj\\CycleGAN-VAE-NST\\celeba')
 
 
 # Usage: call the function, will move all images without 'inverted'
 # (or any other filtering feature) in the name from src_dir to dst_dir
 def flatten_dataset(src_dir, dst_dir, filter_func=None):
+    print(f'Source directory: {src_dir.absolute}')
     if not os.path.exists(ds_dir_flat):
         ds_dir_flat.mkdir(parents=True, exist_ok=True)
         for root, _, fnames in os.walk(src_dir):
