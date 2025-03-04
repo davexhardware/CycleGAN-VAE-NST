@@ -49,4 +49,5 @@ test/data/legacy_serialized.pt
 #Ignore Wandb
 wandb/
 /data/custom_dataset_nst/full/
-/data/custom_dataset_nst/trainA/
+/data/celeba/trainA/
+/data/celeba/
