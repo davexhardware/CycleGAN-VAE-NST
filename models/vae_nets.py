@@ -466,7 +466,7 @@ class RESVAE(nn.Module):
     """
     def __init__(self, channel_in=3, ch=64, blocks=(1, 2, 4, 8), latent_channels=256, num_res_blocks=1, norm_type="bn",
                  deep_model=False):
-        super(VAE, self).__init__()
+        super(RESVAE, self).__init__()
         """Res VAE Network
         channel_in  = number of channels of the image 
         z = the number of channels of the latent representation
