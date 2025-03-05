@@ -25,10 +25,12 @@ def get_norm_layer(norm_type='instance'):
     For BatchNorm, we use learnable affine parameters and track running statistics (mean/stddev).
     For InstanceNorm, we do not use learnable affine parameters. We do not track running statistics.
     """
-    if norm_type == 'batch':
+    if norm_type == 'batch' or norm_type == 'bn':
         norm_layer = functools.partial(nn.BatchNorm2d, affine=True, track_running_stats=True)
     elif norm_type == 'instance':
         norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
+    elif norm_type == 'gn':
+        norm_layer = functools.partial(nn.GroupNorm, num_groups=8)
     elif norm_type == 'none':
         def norm_layer(x):
             return Identity()
