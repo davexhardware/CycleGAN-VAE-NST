@@ -53,8 +53,8 @@ class TensorDataset(BaseDataset):
         else:   # randomize the index for domain B to avoid fixed pairs.
             index_B = random.randint(0, self.B_size - 1)
         B_path = self.B_paths[index_B]
-        A_pt = load(A_path)
-        B_pt = load(B_path)
+        A_pt = load(A_path, weights_only=False)
+        B_pt = load(B_path, weights_only=False)
         if can_cast(A_pt.dtype, float32):
             A_pt=A_pt.float()
         if can_cast(B_pt.dtype, float32):
