@@ -262,7 +262,7 @@ class ResDown(nn.Module):
     Residual down sampling block for the encoder
     It does a pipeline of Activation Function, Convolution and Normalization first
     a with stride of 2, that downsamples the image by a factor of 2, and then again
-    with stride 1. In between, it does a skip connection.
+    with stride 1. In between, it does a skip connection within the first and the second half of the volume.
     """
 
     def __init__(self, channel_in, channel_out, kernel_size=3, norm_type="bn"):
@@ -297,7 +297,7 @@ class ResUp(nn.Module):
     It starts with an up-sampling layer with a scale of 2,
     followed by a pipeline of Activation Function, Convolution and Normalization
     with stride 1, that keep the image size stable. 
-    In between, it does a skip connection.
+    In between, it does a skip connection within the first and the second half of the volume.
     """
 
     def __init__(self, channel_in, channel_out, kernel_size=3, scale_factor=2, norm_type="bn"):
@@ -333,7 +333,7 @@ class ResBlock(nn.Module):
     but increase the number of channels.
     The forward of this block does:
     - {Normalization, Activation function (ELU), Convolution}
-    - Skip connection (identity if channel_in == channel_out)
+    - Skip connection (or identity if channel_in == channel_out, otherwise within the first and the second half of the volume)
     - {Normalization, Activation function (ELU), Convolution}
     """
 

@@ -1,9 +1,15 @@
 import os
 from pathlib import Path
 from data.custom_dataset_nst.scripts import holdout
+import kagglehub
+
+# Download latest version
+path = kagglehub.dataset_download("ibrahimserouis99/one-piece-image-classifier")
+
+print("Path to dataset files:", path)
 
 # TODO: set the path to the downloaded dataset
-ds_dir_original = Path('C:\\Users\\DavideSavoia\\OneDrive - Politecnico di Bari\\1M\\DeepL\\progetto\\One Piece dataset\\Data')
+ds_dir_original = Path(path)
 # TODO: set the path to the directory where the flattened dataset will be stored
 ds_dir_flat = Path('C:\\Users\\DavideSavoia\\Documents\\DeepProj\\CycleGAN-VAE-NST\\celeba\\onepiece')
 # TODO: set the path to the working directory
