@@ -151,23 +151,25 @@ class CycleGANModel(BaseModel):
         real_img=util.tensor2im(real)
         # Fake
         pred_fake = netD(fake.detach())
-        fake_img=util.tensor2im(fake)
-        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
-
-        # Display real image
-        ax[0].imshow(real_img)
-        ax[0].set_title(f'Real Image\nScore: {pred_real.item():.4f}')
-        ax[0].axis('off')
-
-        # Display fake image
-        ax[1].imshow(fake_img)
-        ax[1].set_title(f'Fake Image\nScore: {pred_fake.item():.4f}')
-        ax[1].axis('off')
-
-        # Save the figure
-        plt.savefig(f'./checkpoints/{self.opt.name}/discriminator_scores/discriminator_comparison_{time.localtime()}.png')
-        plt.close(fig)
         loss_D_fake = self.criterionGAN(pred_fake, False)
+        if save_result:
+            fake_img=util.tensor2im(fake)
+            fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+
+            # Display real image
+            ax[0].imshow(real_img)
+            ax[0].set_title(f'Real Image\nScore: {loss_D_real:.4f}')
+            ax[0].axis('off')
+
+            # Display fake image
+            ax[1].imshow(fake_img)
+            ax[1].set_title(f'Fake Image\nScore: {loss_D_fake:.4f}')
+            ax[1].axis('off')
+
+            # Save the figure
+            plt.savefig(f'./checkpoints/{self.opt.name}/discriminator_comparison_{time.localtime()}.png')
+            plt.close(fig)
+        
         # Combined loss and calculate gradients
         loss_D = (loss_D_real + loss_D_fake) * 0.5
         loss_D.backward()
