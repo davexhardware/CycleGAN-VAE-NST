@@ -4,7 +4,9 @@ import torch.nn.functional as F
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
-
+from ..util import util
+import time
+import matplotlib.pyplot as plt
 
 class CycleGANModel(BaseModel):
     """
@@ -132,7 +134,7 @@ class CycleGANModel(BaseModel):
         if isinstance(self.rec_B , tuple) and len(self.rec_B )>1:
             self.rec_B= self.rec_B[0]
 
-    def backward_D_basic(self, netD, real, fake):
+    def backward_D_basic(self, netD, real, fake, save_result=False):
         """Calculate GAN loss for the discriminator
 
         Parameters:
@@ -146,8 +148,25 @@ class CycleGANModel(BaseModel):
         # Real
         pred_real = netD(real)
         loss_D_real = self.criterionGAN(pred_real, True)
+        real_img=util.tensor2im(real)
         # Fake
         pred_fake = netD(fake.detach())
+        fake_img=util.tensor2im(fake)
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+
+        # Display real image
+        ax[0].imshow(real_img)
+        ax[0].set_title(f'Real Image\nScore: {pred_real.item():.4f}')
+        ax[0].axis('off')
+
+        # Display fake image
+        ax[1].imshow(fake_img)
+        ax[1].set_title(f'Fake Image\nScore: {pred_fake.item():.4f}')
+        ax[1].axis('off')
+
+        # Save the figure
+        plt.savefig(f'./checkpoints/{self.opt.name}/discriminator_scores/discriminator_comparison_{time.localtime()}.png')
+        plt.close(fig)
         loss_D_fake = self.criterionGAN(pred_fake, False)
         # Combined loss and calculate gradients
         loss_D = (loss_D_real + loss_D_fake) * 0.5
@@ -157,6 +176,8 @@ class CycleGANModel(BaseModel):
     def backward_D_A(self):
         """Calculate GAN loss for discriminator D_A"""
         fake_B = self.fake_B_pool.query(self.fake_B)
+        if time.time()%100==0:
+            self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B, fake_B,save_result=True)
         self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B, fake_B)
 
     def backward_D_B(self):
