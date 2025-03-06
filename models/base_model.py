@@ -136,9 +136,13 @@ class BaseModel(ABC):
     def get_current_losses(self):
         """Return traning losses / errors. train.py will print out these errors on console, and save them to a file"""
         errors_ret = OrderedDict()
+        total_loss= 0
         for name in self.loss_names:
             if isinstance(name, str):
                 errors_ret[name] = float(getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
+            if name[0] != 'D':
+                total_loss += errors_ret[name]
+        errors_ret['total_loss'] = total_loss
         return errors_ret
 
     def save_networks(self, epoch):
