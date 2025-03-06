@@ -106,7 +106,8 @@ def get_transform(opt, params=None, grayscale=False, method=transforms.Interpola
 
     if convert:
         #transform_list += [transforms.ToTensor()]
-        transform_list.extend([transforms.ToImage(), transforms.ToDtype(float16, scale=True)])
+        transform_dtype= float16 if opt.store_tensors else float32
+        transform_list.extend([transforms.ToImage(), transforms.ToDtype(transform_dtype, scale=True)])
         if grayscale:
             transform_list += [transforms.Normalize((0.5,), (0.5,))]
         else:

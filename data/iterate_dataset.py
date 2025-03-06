@@ -25,7 +25,7 @@ def show(imgs):
  In order to use the tensors for training the model, you should replace the newly created folders
  with trainA and trainB in the <dataroot> directory."""
 
-### Usage: python data\iterate_dataset.py --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
+### Usage: python data\iterate_dataset.py --store_tensors --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
 opt = train_options.TrainOptions().parse()
 src_root='./celeba/'
 dataset_dir=opt.dataroot
