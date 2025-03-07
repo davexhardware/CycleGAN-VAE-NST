@@ -20,15 +20,16 @@ def show(imgs):
     input()
                 
 
-""" Copies the image files from the folders in <src_root>/[<folders>] **temporarly** inside the 
- <dataroot>/trainA folder, then saves the images as tensor files in <dataroot>/<folders>_pt.
+""" Copy the image files from the folders in <src_root>/[<folders>] **temporarly** inside the 
+ <dataroot>/trainA folder, then stores the images as tensor files in <dataroot>/<folder>_pt.
  In order to use the tensors for training the model, you should replace the newly created folders
  with trainA and trainB in the <dataroot> directory."""
 
-### Usage: python data\iterate_dataset.py --store_tensors --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
+### Usage: python data\iterate_dataset.py --transform_float16 --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
+
 opt = train_options.TrainOptions().parse()
 dataset_dir=opt.dataroot
-src_root='./celeba/'
+src_root='./downloads/'
 folders=['img_align_celeba','onepiece']
 
 if not os.path.exists(dataset_dir+'trainB'):
@@ -69,7 +70,6 @@ for folder in folders:
             item=dataset.__getitem__(el)
             path_A=item['A_paths'].replace(src_dir,dest_dir)+'.pt'
             save(item['A'], path_A)
-            
             """serialization.add_safe_globals([Image])
             dir= dest_dir
             if not os.path.isdir(dir):

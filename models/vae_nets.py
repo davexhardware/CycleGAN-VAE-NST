@@ -185,7 +185,7 @@ class VAE(nn.Module):
         for i in range(len(self.layers)):
             self.encoder.add_module("conv%d" % (i + 1), nn.Conv2d(inputs, self.layers[i], 4, 2, 1))
             self.encoder.add_module("conv%d_bn" % (i + 1), self.norm_layer(self.layers[i]))
-            self.encoder.add_module("conv%d_relu" % (i + 1), nn.LeakyReLU(0.2, inplace=True)) 
+            self.encoder.add_module("conv%d_act" % (i + 1), nn.ELU(0.2, inplace=True)) 
             inputs = self.layers[i]
         
         self.fc1 = nn.Linear(inputs * self.d_enc**2, zsize)
@@ -198,7 +198,7 @@ class VAE(nn.Module):
         for i in range(1, len(self.layers)):
             self.decoder.add_module("deconv%d" % (i), nn.ConvTranspose2d(inputs, self.layers[i], 4, 2, 1))
             self.decoder.add_module("deconv%d_bn" % (i), self.norm_layer(self.layers[i]))
-            self.decoder.add_module("deconv%d_relu" % (i), nn.LeakyReLU(0.2, inplace=True))
+            self.decoder.add_module("deconv%d_act" % (i), nn.ELU(0.2, inplace=True))
             inputs = self.layers[i]
         self.decoder.add_module("deconv%d" % (len(self.layers)), nn.ConvTranspose2d(inputs, in_channels, 4, 2, 1))
         self.decoder.add_module("deconv%d_tanh" % (len(self.layers)), nn.Tanh())
@@ -236,18 +236,6 @@ class VAE(nn.Module):
     def make_cuda(self):
         self.encoder.cuda()
         self.decoder.cuda()
-        
-"""    def weight_init(self, mean, std):
-        for m in self._modules:
-            normal_init(self._modules[m], mean, std)
-
-
-def normal_init(m, mean, std):
-    if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d):
-        m.weight.data.normal_(mean, std)
-        m.bias.data.zero_()"""
-        
-
 
 def get_norm_layer(channels, norm_type="batch"):
     if norm_type == "batch":
@@ -487,8 +475,6 @@ class RESVAE(nn.Module):
         recon_img = self.decoder(encoding)
         return recon_img, mu, log_var
 
-# convolutional final dimension= (W-F+2P)/S +1
-
 ########################################################################################
 ########################################################################################
 
@@ -634,3 +620,5 @@ class ResnetBlock(nn.Module):
         """Forward function (with skip connections)"""
         out = x + self.conv_block(x)  # add skip connections
         return out
+
+# convolutional final dimension= (W-F+2P)/S +1

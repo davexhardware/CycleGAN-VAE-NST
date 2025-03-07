@@ -15,7 +15,9 @@ def download_from_kaggle(ds_name, path):
         if os.path.exists(downloaded_path):
             shutil.move(downloaded_path, path)
             print("Dataset downloaded successfully.")
-
+    else:
+        print("Dataset already exists.")
+        
 def holdout(src_path, dest_path, label='A', train_size=10000, test_size=1000):
     print("Destination folder set to ", os.path.abspath(dest_path))
 
