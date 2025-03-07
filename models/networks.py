@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
-from .vae_nets import VAE,VAEGenerator,RESVAE
+from .vae_nets import VAE,VAEGenerator,RESVAE,ResnetVAEGenerator
 
 
 ###############################################################################
@@ -29,8 +29,6 @@ def get_norm_layer(norm_type='instance'):
         norm_layer = functools.partial(nn.BatchNorm2d, affine=True, track_running_stats=True)
     elif norm_type == 'instance':
         norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
-    elif norm_type == 'gn':
-        norm_layer = functools.partial(nn.GroupNorm, num_groups=8)
     elif norm_type == 'none':
         def norm_layer(x):
             return Identity()
@@ -163,6 +161,8 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net =VAE(latent_dim,in_channels=input_nc,img_size=img_size,norm_layer=norm_layer)
     elif netG== 'RESVAE':
         net= RESVAE(input_nc, ch= ngf, num_res_blocks=6, latent_channels=latent_dim, norm_type=norm)
+    elif netG== 'Resnet6VAE':
+        net = ResnetVAEGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6,nz=latent_dim, gpu_ids=gpu_ids)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
@@ -459,7 +459,12 @@ class UnetGenerator(nn.Module):
         It is a recursive process.
         """
         super(UnetGenerator, self).__init__()
-        # construct unet structure
+        # construct unet structure. 
+        # Start from the innermost layer (which will also have the maximum number of filters, nfg*8).
+        # The innermost Block contains downconv -> upconv only.
+        # The outer Blocks contain downconv + [inner_block] + upconv, 
+        # So they inglobate each other
+        # The outermost block contains a final
         unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=None, norm_layer=norm_layer, innermost=True)  # add the innermost layer
         for i in range(num_downs - 5):          # add intermediate layers with ngf * 8 filters
             unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer, use_dropout=use_dropout)

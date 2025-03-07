@@ -4,14 +4,13 @@ import torch.nn.functional as F
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
-from ..util import util
+import util.util as util
 import time
 import matplotlib.pyplot as plt
 
 class CycleGANModel(BaseModel):
     """
     This class implements the CycleGAN model, for learning image-to-image translation without paired data.
-
     The model training requires '--dataset_mode unaligned' dataset.
     By default, it uses a '--netG resnet_9blocks' ResNet generator,
     a '--netD basic' discriminator (PatchGAN introduced by pix2pix),
@@ -43,9 +42,9 @@ class CycleGANModel(BaseModel):
         if is_train:
             parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
             parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
-            parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
-            parser.add_argument('--lambda_rec', type=float, default=0.5, help='weight for reconstruction loss, only in case of VAE Generators'),
-            parser.add_argument('--lambda_kl', type=float, default=0.001, help='weight for kl loss, only in case of VAE Generators'),
+            parser.add_argument('--lambda_identity', type=float, default=0.1, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
+            parser.add_argument('--lambda_rec', type=float, default=1, help='weight for reconstruction loss, only in case of VAE Generators'),
+            parser.add_argument('--lambda_kl', type=float, default=1, help='weight for kl loss, only in case of VAE Generators'),
 
         return parser
 
@@ -97,6 +96,11 @@ class CycleGANModel(BaseModel):
             self.criterionIdt = torch.nn.L1Loss()
             self.reconstructionLoss= torch.nn.MSELoss()
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
+            """ TODO: check
+            self.netG_A.train()
+            self.netG_B.train()
+            self.netD_A.train()
+            self.netD_B.train()"""
             self.optimizer_G = torch.optim.Adam(itertools.chain(self.netG_A.parameters(), self.netG_B.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(itertools.chain(self.netD_A.parameters(), self.netD_B.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizers.append(self.optimizer_G)
