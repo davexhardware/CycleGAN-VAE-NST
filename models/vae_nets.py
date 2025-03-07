@@ -568,7 +568,6 @@ class ResnetVAEGenerator(nn.Module):
     def forward(self, input):
         """Standard forward"""
         x = self.encoder(input)
-        print(f"#####################################à\n###############################\n#######################\nEncoder output shape: {x.shape}#####################################à\n###############################\n#######################\n")
         mu = self.conv_mu(x)
         log_var = self.conv_logvar(x)
         if self.training:
