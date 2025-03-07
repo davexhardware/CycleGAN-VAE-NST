@@ -1,4 +1,4 @@
-from unaligned_dataset import UnalignedDataset
+from data.unaligned_dataset import UnalignedDataset
 from options import train_options
 from torch import save,load,serialization, Tensor
 from torchvision.tv_tensors import Image
@@ -25,7 +25,7 @@ def show(imgs):
  In order to use the tensors for training the model, you should replace the newly created folders
  with trainA and trainB in the <dataroot> directory."""
 
-### Usage: python data\iterate_dataset.py --transform_float16 --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
+### Usage: python iterate_dataset.py --transform_float16 --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
 
 opt = train_options.TrainOptions().parse()
 dataset_dir=opt.dataroot
