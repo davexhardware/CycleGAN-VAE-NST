@@ -118,7 +118,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
     return net
 
 
-def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[],latent_dim=None,img_size=None):
+def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[],latent_dim=None,img_size=None,n_layers_G=6):
     """Create a generator
 
     Parameters:
@@ -160,9 +160,9 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     elif netG== 'VAE1':
         net =VAE(latent_dim,in_channels=input_nc,img_size=img_size,norm_layer=norm_layer)
     elif netG== 'RESVAE':
-        net= RESVAE(input_nc, ch= ngf, num_res_blocks=6, latent_channels=latent_dim, norm_type=norm)
-    elif netG== 'Resnet6VAE':
-        net = ResnetVAEGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6,nz=latent_dim, gpu_ids=gpu_ids)
+        net= RESVAE(input_nc, ch= ngf, num_res_blocks=n_layers_G, latent_channels=latent_dim, norm_type=norm)
+    elif netG== 'ResnetKVAE':
+        net = ResnetVAEGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=n_layers_G,nz=latent_dim, gpu_ids=gpu_ids)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
