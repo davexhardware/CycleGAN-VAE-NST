@@ -498,7 +498,7 @@ class ResnetVAEGenerator(nn.Module):
     We adapt Torch code and idea from Justin Johnson's neural style transfer project(https://github.com/jcjohnson/fast-neural-style)
     """
 
-    def __init__(self, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, padding_type='reflect', nz=256, gpu_ids=[]):
+    def __init__(self, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, padding_type='reflect', nz=256):
         """Construct a Resnet-based generator
 
         Parameters:
@@ -524,7 +524,7 @@ class ResnetVAEGenerator(nn.Module):
                  norm_layer(ngf),
                  nn.ReLU(True)]
 
-        n_downsampling = 2
+        n_downsampling = 3
         for i in range(n_downsampling):  # add downsampling layers, each time the image size is divided by 2
             mult = 2 ** i
             encoder += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=use_bias),
@@ -568,6 +568,7 @@ class ResnetVAEGenerator(nn.Module):
     def forward(self, input):
         """Standard forward"""
         x = self.encoder(input)
+        print(f'Encoder output shape {x.shape}')
         mu = self.conv_mu(x)
         log_var = self.conv_logvar(x)
         if self.training:

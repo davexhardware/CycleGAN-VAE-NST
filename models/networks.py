@@ -142,6 +142,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         Resnet-based generator consists of several Resnet blocks between a few downsampling/upsampling operations.
         We adapt Torch code from Justin Johnson's neural style transfer project (https://github.com/jcjohnson/fast-neural-style).
 
+    Additionally, Variational Autoencoder - based generators were added
 
     The generator has been initialized by <init_net>. It uses RELU for non-linearity.
     """
@@ -162,7 +163,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     elif netG== 'RESVAE':
         net= RESVAE(input_nc, ch= ngf, num_res_blocks=n_layers_G, latent_channels=latent_dim, norm_type=norm)
     elif netG== 'ResnetKVAE':
-        net = ResnetVAEGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=n_layers_G,nz=latent_dim, gpu_ids=gpu_ids)
+        net = ResnetVAEGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=n_layers_G,nz=latent_dim)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
