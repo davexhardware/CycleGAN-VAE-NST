@@ -27,8 +27,8 @@ def show(imgs):
 
 ### Usage: python data\iterate_dataset.py --store_tensors --preprocess resize_and_crop --dataroot .\datasets\ --gpu_ids -1 --load_size <LOAD_SIZE> --crop_size <CROP>
 opt = train_options.TrainOptions().parse()
-src_root='./celeba/'
 dataset_dir=opt.dataroot
+src_root='./celeba/'
 folders=['img_align_celeba','onepiece']
 
 if not os.path.exists(dataset_dir+'trainB'):

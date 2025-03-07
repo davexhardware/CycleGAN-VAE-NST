@@ -1,20 +1,19 @@
 import os
 from pathlib import Path
 from data.custom_dataset_nst.scripts import holdout
-import kagglehub
+from data.custom_dataset_nst.scripts import download_from_kaggle
 
-# Download latest version
-path = kagglehub.dataset_download("ibrahimserouis99/one-piece-image-classifier")
 
-print("Path to dataset files:", path)
 
 # TODO: set the path to the downloaded dataset
-ds_dir_original = Path(path)
+ds_dir_original = Path("C:\\Users\\DavideSavoia\\Documents\\DeepProj\\CycleGAN-VAE-NST\\downloads")
 # TODO: set the path to the directory where the flattened dataset will be stored
-ds_dir_flat = Path('C:\\Users\\DavideSavoia\\Documents\\DeepProj\\CycleGAN-VAE-NST\\celeba\\onepiece')
-# TODO: set the path to the working directory
-working_dir = Path('C:\\Users\\DavideSavoia\\Documents\\DeepProj\\CycleGAN-VAE-NST\\celeba')
+ds_dir_flat = Path('C:\\Users\\DavideSavoia\\Documents\\DeepProj\\CycleGAN-VAE-NST\\downloads\\onepiece')
 
+download_from_kaggle(
+    path=ds_dir_original,
+    ds_name='ibrahimserouis99/one-piece-image-classifier'
+)
 
 # Usage: call the function, will move all images without 'inverted'
 # (or any other filtering feature) in the name from src_dir to dst_dir
