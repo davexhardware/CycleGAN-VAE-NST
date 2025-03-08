@@ -38,7 +38,6 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256, use_w
     ims, txts, links = [], [], []
     ims_dict = {}
     for label, im_data in visuals.items():
-        print('im_data shape', im_data.shape)
         if isinstance(im_data, tuple) and len(im)>1:
             im_data=im_data[0]
         im = util.tensor2im(im_data)
