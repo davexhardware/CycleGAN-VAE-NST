@@ -49,7 +49,10 @@ The current code only supports RGB and grayscale images. If you would like to tr
 
 - If you use visdom and HTML to visualize the results, you may also need to change the visualization code.
 
-#### Multi-GPU Training ([#327](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/327), [#292](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/292), [#137](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/137), [#35](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/35))
+#### Multi-GPU Training ([#327]
+##### Disclaimer on MultiGPUs
+The way the multi-gpu is handled inside code is not effective nor efficient, resulting into ***unbalanced GPU usage***. [nn.DataParallel](https://pytorch.org/docs/stable/notes/cuda.html#use-nn-parallel-distributeddataparallel-instead-of-multiprocessing-or-nn-dataparallel) is used instead of `nn.parallel.DistributedDataParallel` (DDP). DDP module uses multi-processing instead of multi-threading, overcoming most of the issues that come from Python interpreter handling threads.
+[#327](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/327), [#292](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/292), [#137](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/137), [#35](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/35))
 You can use Multi-GPU training by setting `--gpu_ids` (e.g., `--gpu_ids 0,1,2,3` for the first four GPUs on your machine.) To fully utilize all the GPUs, you need to increase your batch size. Try `--batch_size 4`, `--batch_size 16`, or even a larger batch_size. Each GPU will process batch_size/#GPUs images. The optimal batch size depends on the number of GPUs you have, GPU memory per GPU, and the resolution of your training images.
 
 We also recommend that you use the instance normalization for multi-GPU training by setting `--norm instance`. The current batch normalization might not work for multi-GPUs as the batchnorm parameters are not shared across different GPUs. Advanced users can try [synchronized batchnorm](https://github.com/vacancy/Synchronized-BatchNorm-PyTorch).
@@ -90,9 +93,6 @@ The authors also observe that the generator unnecessarily inverts the color of t
 
 #### For labels2photo Cityscapes evaluation, why does the pretrained FCN-8s model not work well on the original Cityscapes input images? ([#150](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/150))
 The model was trained on 256x256 images that are resized/upsampled to 1024x2048, so expected input images to the network are very blurry. The purpose of the resizing was to 1) keep the label maps in the original high resolution untouched and 2) avoid the need to change the standard FCN training code for Cityscapes.
-
-#### How do I get the `ground-truth` numbers on the labels2photo Cityscapes evaluation? ([#150](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/150))
-You need to resize the original Cityscapes images to 256x256 before running the evaluation code.
 
 #### What is a good evaluation metric for CycleGAN? ([#730](https://github.com/pulls), [#716](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/716), [#166](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/166))
 The evaluation metric highly depends on your specific task and dataset. There is no single metric that works for all the datasets and tasks.

@@ -4,7 +4,91 @@ import math
 import torch
 import torch.nn as nn
 
+# =======================================================================================================
+# ==================================VAE1===========================================================
+# =======================================================================================================
+# =======================================================================================================
+
+class VAE(nn.Module):
+    def __init__(self, zsize, layers=None, in_channels=3, img_size=128, norm_layer=nn.BatchNorm2d):
+        super(VAE, self).__init__()
+        self.img_size = img_size
+        log_imsize= math.log2(img_size)
+        self.latent_dim = zsize
+        self.norm_layer=norm_layer
+        if not layers: # n° filters for each layer
+            self.layers=[64,128,256,512]
+        else:
+            self.layers=layers
+        
+        # the convolution of the encoder, with a kernel=4, stride=2, padding=1
+        # has the effect of reducing the size of the image by a factor of 2
+        # so we need to ensure that the number of layers is consistent with the size of the image
+        
+        self.size_imenc=2**int(log_imsize-len(self.layers))
+        
+        assert self.size_imenc>2, "The number of layers is not consistent with the size of the image"
+        
+        self.encoder= nn.Sequential()
+        
+        inputs = in_channels
+        for i in range(len(self.layers)):
+            self.encoder.add_module("conv%d" % (i + 1), nn.Conv2d(inputs, self.layers[i], 4, 2, 1))
+            self.encoder.add_module("conv%d_bn" % (i + 1), self.norm_layer(self.layers[i]))
+            self.encoder.add_module("conv%d_act" % (i + 1), nn.ELU(0.2, inplace=True)) 
+            inputs = self.layers[i]
+        
+        self.fc1 = nn.Linear(inputs * self.size_imenc**2, zsize)
+        self.fc2 = nn.Linear(inputs * self.size_imenc**2, zsize)
+
+        self.d1 = nn.Linear(zsize, inputs * self.size_imenc**2)
+
+        self.decoder= nn.Sequential()
+        self.layers.reverse()
+        for i in range(1, len(self.layers)):
+            self.decoder.add_module("deconv%d" % (i), nn.ConvTranspose2d(inputs, self.layers[i], 4, 2, 1))
+            self.decoder.add_module("deconv%d_bn" % (i), self.norm_layer(self.layers[i]))
+            self.decoder.add_module("deconv%d_act" % (i), nn.ELU(0.2, inplace=True))
+            inputs = self.layers[i]
+        self.decoder.add_module("deconv%d" % (len(self.layers)), nn.ConvTranspose2d(inputs, in_channels, 4, 2, 1))
+        self.decoder.add_module("deconv%d_tanh" % (len(self.layers)), nn.Tanh())
+        self.layers.reverse()
+
+    def encode(self, x):
+        x=self.encoder.forward(x)
+        x = x.view(x.shape[0], self.layers[-1] * self.size_imenc**2)
+        h1 = self.fc1(x)
+        h2 = self.fc2(x)
+        return h1, h2
+
+    def reparameterize(self, mu, logvar):
+        if self.training:
+            std = torch.exp(0.5 * logvar)
+            eps = torch.randn_like(std)
+            return eps.mul(std).add_(mu)
+        else:
+            return mu
+
+    def decode(self, x):
+        x = x.view(x.shape[0], self.latent_dim)
+        x = self.d1(x)
+        x = x.view(x.shape[0], self.layers[-1], self.size_imenc, self.size_imenc)
+        x= self.decoder.forward(x)
+        return x
+
+    def forward(self, x):
+        mu, logvar = self.encode(x)
+        mu = mu.squeeze()
+        logvar = logvar.squeeze()
+        z = self.reparameterize(mu, logvar)
+        return self.decode(z.view(-1, self.latent_dim, 1, 1)), mu, logvar
+
 # /VAE-Cycle-GAN/ from https://github.com/xr-Yang/CycleGAN-VAE-for-reid/
+# =======================================================================================================
+# ==================================VAEGAN===========================================================
+# =======================================================================================================
+# =======================================================================================================
+
 class _Sampler(nn.Module):
     def __init__(self,gpu_id=0):
         super(_Sampler, self).__init__()
@@ -140,102 +224,12 @@ class VAEGenerator(nn.Module):
         self.encoder.cuda()
         self.sampler.cuda()
         self.decoder.cuda()
-        
-# Copyright 2019 Stanislav Pidhorskyi
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#  http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
 
-import torch
-from torch import nn
-from torch.nn import functional as F
-
-
-class VAE(nn.Module):
-    def __init__(self, zsize, layers=None, in_channels=3, img_size=128, norm_layer=nn.BatchNorm2d):
-        super(VAE, self).__init__()
-        self.d = img_size
-        log_d= math.log2(img_size)
-        self.zsize = zsize
-        self.norm_layer=norm_layer
-        if not layers: # filters (representi features) for each layer
-            self.layers=[64,128,256,512]
-        else:
-            self.layers=layers
-        
-        # the convolution of the encoder, with a kernel=4, stride=2, padding=1
-        # has the effect of reducing the size of the image by a factor of 2
-        # so we need to ensure that the number of layers is consistent with the size of the image
-        self.d_enc=2**int(log_d-len(self.layers))
-        
-        assert self.d_enc>2, "The number of layers is not consistent with the size of the image"
-        
-        self.encoder= nn.Sequential()
-        inputs = in_channels
-        for i in range(len(self.layers)):
-            self.encoder.add_module("conv%d" % (i + 1), nn.Conv2d(inputs, self.layers[i], 4, 2, 1))
-            self.encoder.add_module("conv%d_bn" % (i + 1), self.norm_layer(self.layers[i]))
-            self.encoder.add_module("conv%d_act" % (i + 1), nn.ELU(0.2, inplace=True)) 
-            inputs = self.layers[i]
-        
-        self.fc1 = nn.Linear(inputs * self.d_enc**2, zsize)
-        self.fc2 = nn.Linear(inputs * self.d_enc**2, zsize)
-
-        self.d1 = nn.Linear(zsize, inputs * self.d_enc**2)
-
-        self.decoder= nn.Sequential()
-        self.layers.reverse()
-        for i in range(1, len(self.layers)):
-            self.decoder.add_module("deconv%d" % (i), nn.ConvTranspose2d(inputs, self.layers[i], 4, 2, 1))
-            self.decoder.add_module("deconv%d_bn" % (i), self.norm_layer(self.layers[i]))
-            self.decoder.add_module("deconv%d_act" % (i), nn.ELU(0.2, inplace=True))
-            inputs = self.layers[i]
-        self.decoder.add_module("deconv%d" % (len(self.layers)), nn.ConvTranspose2d(inputs, in_channels, 4, 2, 1))
-        self.decoder.add_module("deconv%d_tanh" % (len(self.layers)), nn.Tanh())
-        self.layers.reverse()
-
-    def encode(self, x):
-        x=self.encoder.forward(x)
-        x = x.view(x.shape[0], self.layers[-1] * self.d_enc**2)
-        h1 = self.fc1(x)
-        h2 = self.fc2(x)
-        return h1, h2
-
-    def reparameterize(self, mu, logvar):
-        if self.training:
-            std = torch.exp(0.5 * logvar)
-            eps = torch.randn_like(std)
-            return eps.mul(std).add_(mu)
-        else:
-            return mu
-
-    def decode(self, x):
-        x = x.view(x.shape[0], self.zsize)
-        x = self.d1(x)
-        x = x.view(x.shape[0], self.layers[-1], self.d_enc, self.d_enc)
-        x= self.decoder.forward(x)
-        return x
-
-    def forward(self, x):
-        mu, logvar = self.encode(x)
-        mu = mu.squeeze()
-        logvar = logvar.squeeze()
-        z = self.reparameterize(mu, logvar)
-        return self.decode(z.view(-1, self.zsize, 1, 1)), mu, logvar
-
-    def make_cuda(self):
-        self.encoder.cuda()
-        self.decoder.cuda()
+# Inspired form https://github.com/LukeDitria/CNN-VAE/tree/master
+# =======================================================================================================
+# ==================================RESVAE===========================================================
+# =======================================================================================================
+# =======================================================================================================
 
 def get_norm_layer(channels, norm_type="batch"):
     if norm_type == "batch":
@@ -245,7 +239,6 @@ def get_norm_layer(channels, norm_type="batch"):
     else:
         ValueError("norm_type must be bn or gn")
 
-
 class ResDown(nn.Module):
     """
     Residual down sampling block for the encoder
@@ -253,7 +246,6 @@ class ResDown(nn.Module):
     a with stride of 2, that downsamples the image by a factor of 2, and then again
     with stride 1. In between, it does a skip connection within the first and the second half of the volume.
     """
-
     def __init__(self, channel_in, channel_out, kernel_size=3, norm_type="bn"):
         super(ResDown, self).__init__()
         self.norm1 = get_norm_layer(channel_in, norm_type=norm_type)
@@ -475,8 +467,10 @@ class RESVAE(nn.Module):
         recon_img = self.decoder(encoding)
         return recon_img, mu, log_var
 
-########################################################################################
-########################################################################################
+# =======================================================================================================
+# ==================================ResnetKVAE===========================================================
+# =======================================================================================================
+# =======================================================================================================
 
 class ResnetVAEGenerator(nn.Module):
     """Resnet-based generator that consists of Resnet blocks between a few downsampling/upsampling operations.
@@ -621,4 +615,4 @@ class ResnetBlock(nn.Module):
         out = x + self.conv_block(x)  # add skip connections
         return out
 
-# convolutional final dimension= (W-F+2P)/S +1
+# convolution final dimension= (W-F+2P)/S +1
