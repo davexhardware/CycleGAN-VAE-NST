@@ -6,7 +6,7 @@ This repository is a fork of <a href="https://github.com/junyanz/pytorch-CycleGA
 <img src="./imgs/082975_comparison.png" align="center">
 <img src="./imgs/085655_comparison.png" align="center">
 
-This project aims at transferring style from OnePiece's anime images to real human pictures. This particular Deep Learning task was carried on using a particular architecture, the CycleGAN (Generative Adversarial Networks), which uses two generators and two discriminators to transfer from style A to style B and back (B to A). It also introduces the **Cycle Consistency Loss** concept, that ensures that a style transfer is consistent because it can be reversed.
+This project aims at transferring style from real human pictures to OnePiece's anime or manga style. This particular Deep Learning task was carried on using a particular architecture, the CycleGAN (Generative Adversarial Networks), which uses two generators and two discriminators to transfer from style A to style B and back (B to A). It also introduces the **Cycle Consistency Loss** concept, that ensures that a style transfer is consistent because it can be reversed.
 
 Variational AutoEncoders (VAE) have been chosen as Generator networks for the CycleGAN.
 Discriminator networks are still the ones in the original paper, some 70\*70 PatchGANs, which aim to classify whether 70\*70px overlapping image patches are real or fake.
