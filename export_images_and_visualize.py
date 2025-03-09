@@ -61,7 +61,7 @@ for real_name in real_images:
     # Find matching fake in each model directory.
     for model in model_dirs:
         fake_name = real_name.replace("_real", "_fake")
-        fake_path = os.path.join("./results", model, fake_name)
+        fake_path = os.path.join(root_export, model, fake_name)
         if os.path.exists(fake_path):
             fake_img = Image.open(fake_path).convert("RGB")
             images.append(fake_img)
