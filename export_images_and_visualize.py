@@ -20,10 +20,12 @@ def merge_results(src_dir,dest_dir,epochs):
                     shutil.copy(source_dir+image,dest_dir+image)
                     break
 
-def create_comparison(export_root,compare_dir):
+def create_comparison(export_root, compare_dir, exclusion_keys=None):
         
+    if exclusion_keys is None:
+        exclusion_keys = list()
     model_dirs = [
-        d for d in os.listdir(export_root) if os.path.isdir(os.path.join(export_root, d))
+        d for d in os.listdir(export_root) if os.path.isdir(os.path.join(export_root, d)) and all([key not in d for key in exclusion_keys])
     ]
     model_dirs.sort(key=lambda x: x.split('_')[1]+x.split('_')[0] if '_' in x else x)
 
@@ -38,7 +40,7 @@ def create_comparison(export_root,compare_dir):
     for real_name in real_images:
         images = [''.join([ref_path,'/',real_name]) ]
         captions = ["Real"]
-
+        size_px=256
         # Find matching fake in each model directory.
         for model in model_dirs:
             fake_name = real_name.replace("_real", "_fake")
@@ -46,7 +48,7 @@ def create_comparison(export_root,compare_dir):
             if os.path.exists(fake_path):
                 images.append(fake_path)
                 captions.append(model)
-        fig, axes = plt.subplots(1, len(images), figsize=(20,20))
+        fig, axes = plt.subplots(1, len(images), figsize=(size_px*len(images)*3/size_px, size_px*3/size_px))
         for ax, path, label in zip(axes, images, captions):
             img =Image.open(path)
             ax.imshow(img)
@@ -73,6 +75,7 @@ merge_results(root_src_dir,root_dest_dir,epochs)
 #### Comment this section if you don't want
 #### to create the comparison images
 root_export='./results/export_results/'
-comparison_dir = root_export+"comparisons/"
+comparison_dir = root_export+"comparison_s/"
 os.makedirs(comparison_dir, exist_ok=True)
-create_comparison(root_export,comparison_dir)
+exclude_dir_keys=['comparison','real2op150', 'real2op250', 'real2op350']
+create_comparison(root_export,comparison_dir,exclude_dir_keys)
