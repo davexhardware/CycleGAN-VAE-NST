@@ -30,12 +30,12 @@ root_dest_dir='./results/export_results/real2op{epoch}_reference_idt/'
 merge_results(root_src_dir,root_dest_dir,epochs)
 
 root_export='./results/export_results/'
-# Identify model subfolders (excluding any you don't want).
+
 model_dirs = [
     d for d in os.listdir(root_export) if os.path.isdir(os.path.join(root_export, d))
 ]
+model_dirs.sort(key=lambda x: x.split('_')[1]+x.split('_')[0] if '_' in x else x)
 
-# Create a directory to store comparisons.
 compare_dir = root_export+"comparisons/"
 os.makedirs(compare_dir, exist_ok=True)
 
@@ -46,7 +46,6 @@ real_images = [
     f for f in os.listdir(ref_path) if '_real' in f
 ]
 
-# Font setup for text (optional).
 try:
     font = ImageFont.load_default()
 except:
@@ -70,13 +69,13 @@ for real_name in real_images:
     # Combine them horizontally with captions.
     total_width = sum(im.width for im in images)
     max_height = max(im.height for im in images)
-    combined = Image.new("RGB", (total_width, max_height), "white")
+    combined = Image.new("RGB", (total_width, max_height), "black")
     x_offset = 0
 
     for im, cap in zip(images, captions):
+        draw = ImageDraw.Draw(im)
+        draw.text((5, 5), cap, font=font, fill="white")
         combined.paste(im, (x_offset, 0))
-        draw = ImageDraw.Draw(combined)
-        draw.text((x_offset + 5, 5), cap, fill="black", font=font)
         x_offset += im.width
 
     # Save the comparison image.
