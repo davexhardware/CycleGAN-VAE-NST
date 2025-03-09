@@ -1,6 +1,7 @@
-# CycleGAN implementation with Variational Autoencoders for Neural Style Transfer from human portraits to OnePiece
+# CycleGAN implementation with Variational Autoencoders for Neural Style Transfer
 
 This repository is a fork of <a href="https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix">pytorch-CycleGAN-and-pix2pix</a>, find all of the aknowledgments at the bottom of this readme.
+### NST from human pictures to OnePiece
 
 This project aims at transferring style from OnePiece's anime images to real human pictures. This particular Deep Learning task was carried on using a particular architecture, the CycleGAN (Generative Adversarial Networks), which uses two generators and two discriminators to transfer from style A to style B and back (B to A). It also introduces the **"Cycle Consistency Loss"** concept, that ensures that a style transfer is consistent because it can be reversed.
 
@@ -12,10 +13,14 @@ The experiments that were carried on included differen VAE Networks Architecture
 ### Codebase
 
 The codebase was kept as similar as possible to the original repostory, leveraging on the existent framework for Data preprocessing, Dataset loading and Model's loading, training and testing management. Actually, the non-CycleGAN-related scripts and models were cleaned out and custom ones were introduced:
-- Dataset download and preprocessing [scripts](./data/custom_dataset_nst/)
-- Dataset conversion to tensors [script](./iterate_dataset.py)
-- [Tensor](./data/tensor_dataset.py) Dataset Loader
-- [VAEs](./models/vae_nets.py) network architectures
+- Dataset download and preprocessing [scripts](./data/custom_dataset_nst/);
+- Dataset conversion to tensors [script](./iterate_dataset.py);
+- [Tensor](./data/tensor_dataset.py) Dataset Loader;
+- [VAEs](./models/vae_nets.py) network architectures, in particular four different VAEs were introduced:
+  - `VAE1`: a rudimental handmade model based on a CN-based AutoEncoder architecture where Encoder has (Conv+Bn+Activ.funct.) for each layer, default 4 layers of [64,128,256,512] conv. filters. The decoder is basically an inverted encoder plus a final de-convolution and an hyperbolic tangent. The mapping to the latent space is done via two FC hidden layers, and their output passes through a reparametrization function to match a Normal Distribution. This network was not able to train for enough epochs before losses imploded to `NaN`, probably because of it's poor generative capacity.
+  - `VAEGAN` was our second try, inspired by an online repository we found (find it in the Acknowledgement and Code), it's similar to the first model but it has Convolutional mapping to the latent space, which resulted in a valid training phase but with scarse final results, probably because of a limit of the simple Convolutional based approach.
+  - after reading some papers about goodness of ResNets adapted to VAE,we decided to edit the ResNet generator from the original CycleGAN repository, renaming it `ResnetKVAE`. We added two convolution kernels at the end of the Encoder to get latent mean and variance, then a latent space sampling function using the reparametrization trick and a convolution layer to sample from the latent space distribution to input the Decoder.
+  - Finally we tried the VAE-adapted-ResNet from [LukeDitria](https://github.com/LukeDitria/CNN-VAE), but it's massive number of parameters made it quite difficult to train for a considerable number of epochs.
 
 Notice that the actual codebase differs from the original one, so commands or options coming from the original repository may not work here.
 
