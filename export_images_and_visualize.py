@@ -60,7 +60,7 @@ for real_name in real_images:
 
     # Find matching fake in each model directory.
     for model in model_dirs:
-        fake_name = real_name.replace("_real.jpg", "_fake.jpg")
+        fake_name = real_name.replace("_real", "_fake")
         fake_path = os.path.join("./results", model, fake_name)
         if os.path.exists(fake_path):
             fake_img = Image.open(fake_path).convert("RGB")
@@ -80,5 +80,5 @@ for real_name in real_images:
         x_offset += im.width
 
     # Save the comparison image.
-    out_name = real_name.replace("_real.jpg", "_comparison.jpg")
+    out_name = real_name.replace("_real", "_comparison")
     combined.save(os.path.join(compare_dir, out_name))
