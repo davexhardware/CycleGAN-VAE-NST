@@ -2,7 +2,6 @@ import shutil
 import os
 from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 
 image_labels=['282','51493','82975','85655','090327',
               '076921','066850','059070', '064218','048722',
@@ -58,14 +57,14 @@ except:
     
 for real_name in real_images:
     # Open the real image.
-    real_img = Image.open(os.path.join(ref_path, real_name)).convert("RGB")
-    images = [real_img]
+    #real_img = Image.open(os.path.join(ref_path, real_name)).convert("RGB")
+    images = [''.join([ref_path,'/',real_name]) ]#[real_img]
     captions = ["Real"]
 
     # Find matching fake in each model directory.
     for model in model_dirs:
         fake_name = real_name.replace("_real", "_fake")
-        fake_path = os.path.join(root_export, model, fake_name)
+        fake_path = ''.join([root_export, model,'/', fake_name])
         if os.path.exists(fake_path):
             images.append(fake_path)
             captions.append(model)
@@ -75,11 +74,11 @@ for real_name in real_images:
     #max_height = max(im.height for im in images)
     #combined = Image.new("RGB", (total_width, max_height), "black")
     #x_offset = 0
-    fig, axes = plt.subplots(1, len(images))
-    for ax, path, label in zip(axes, images, image_labels):
-        img = mpimg.imread(path)
+    fig, axes = plt.subplots(1, len(images), figsize=(20,20))
+    for ax, path, label in zip(axes, images, captions):
+        img =Image.open(path)
         ax.imshow(img)
-        ax.set_title(label, color="white")
+        ax.set_title(label, color="black")
         ax.axis("off")
 
     fig.tight_layout()
