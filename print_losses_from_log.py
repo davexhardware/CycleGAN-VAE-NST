@@ -26,7 +26,9 @@ with open(src_losses,'r') as f:
             _=parsed.pop('time')
             _=parsed.pop('data')
             losses.append(parsed)
-            if(i%opt.print_freq==0):
+            if 'total_loss' not in parsed:
+                parsed['total_loss'] = sum(parsed.values())
+            if(i%10==0):
                 visualizer.plot_current_losses(
                     epoch,
                     float(iters)/dataset_size,

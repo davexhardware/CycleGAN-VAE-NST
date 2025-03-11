@@ -1,3 +1,4 @@
+import re
 import shutil
 import os
 from PIL import Image, ImageDraw, ImageFont
@@ -7,10 +8,10 @@ image_labels=['282','51493','82975','85655','090327',
               '076921','066850','059070', '064218','048722',
               '046466']
 
-def merge_results(src_dir,dest_dir,epochs):
+def merge_results(src_dir,format_dest_dir,model_base,model_identifier,epochs):
     for epoch in epochs:
-        source_dir=src_dir.format(epoch=epoch)
-        dest_dir=root_dest_dir.format(epoch=epoch)
+        source_dir=src_dir.format(epoch=epoch,mb=model_base,mi=model_identifier)
+        dest_dir=format_dest_dir.format(epoch=epoch,mb=model_base,mi=model_identifier)
         if not os.path.exists(dest_dir):
             os.makedirs(dest_dir, exist_ok=True)
         images=os.listdir(source_dir)
@@ -20,14 +21,16 @@ def merge_results(src_dir,dest_dir,epochs):
                     shutil.copy(source_dir+image,dest_dir+image)
                     break
 
-def create_comparison(export_root, compare_dir, exclusion_keys=None):
+def create_comparison(export_root, compare_dir, inclusion_keys=None,exclusion_keys=None):
         
+    if inclusion_keys is None:
+        inclusion_keys = list()
     if exclusion_keys is None:
         exclusion_keys = list()
     model_dirs = [
-        d for d in os.listdir(export_root) if os.path.isdir(os.path.join(export_root, d)) and all([key not in d for key in exclusion_keys])
+        d for d in os.listdir(export_root) if os.path.isdir(os.path.join(export_root, d)) and any([k in d for k in inclusion_keys]) and all([k not in d for k in exclusion_keys])
     ]
-    model_dirs.sort(key=lambda x: x.split('_')[1]+x.split('_')[0] if '_' in x else x)
+    model_dirs.sort(key=lambda x: x.split('_')[1]+re.findall(r'(\d){2,3}',x)[0] if '_' in x else re.findall(r'(\d){2,3}',x)[0])
 
     # Use one model as reference for real images.
     ref_model = model_dirs[0]
@@ -63,19 +66,25 @@ def create_comparison(export_root, compare_dir, exclusion_keys=None):
 
 #### Comment this section if you don't want 
 #### to load the images to the export_results folder
-root_src_dir='./results/real2op{epoch}/test_latest/images/'
+model_base='real2op'
+epochs=['060','080']
+model_identifier='_vaegan_complex'
+root_src_dir="./results/{mb}{epoch}{mi}/test_latest/images/"
+root_dest_dir='./results/export_results/{mb}{epoch}{mi}/'
+merge_results(root_src_dir,root_dest_dir,model_base,model_identifier,epochs)
+"""
+model_base='real2op'
 epochs=[200,250,300,350]
-root_dest_dir='./results/export_results/real2op{epoch}/'
-merge_results(root_src_dir,root_dest_dir,epochs)
-root_src_dir='./results/real2op{epoch}_reference_idt/test_latest/images/'
-epochs=[100,150,200]
-root_dest_dir='./results/export_results/real2op{epoch}_reference_idt/'
-merge_results(root_src_dir,root_dest_dir,epochs)
-
+model_identifier='_vaegan_complex'
+root_src_dir="./results/{mb}{epoch}{mi}/test_latest/images/"
+root_dest_dir='./results/export_results/{mb}{epoch}{mi}/'
+merge_results(root_src_dir,root_dest_dir,model_base,model_identifier,epochs)
+"""
 #### Comment this section if you don't want
 #### to create the comparison images
 root_export='./results/export_results/'
-comparison_dir = root_export+"comparison_s/"
+comparison_dir = root_export+"comparison_vaegan/"
 os.makedirs(comparison_dir, exist_ok=True)
-exclude_dir_keys=['comparison','real2op150', 'real2op250', 'real2op350']
-create_comparison(root_export,comparison_dir,exclude_dir_keys)
+include_dir_keys=['vaegan']
+exclude_dir_keys=['comparison']
+create_comparison(root_export,comparison_dir,include_dir_keys,exclude_dir_keys)
