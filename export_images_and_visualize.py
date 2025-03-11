@@ -4,9 +4,7 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
 
-image_labels=['282','51493','82975','85655','090327',
-              '076921','066850','059070', '064218','048722',
-              '046466']
+image_labels=['_flat_Ace_100','_flat_Chopper_11','_flat_Usopp_modified_152','_flat_Shanks_27','_flat_Nami_32','_flat_Rayleigh_184','_flat_Usopp_4']
 
 def merge_results(src_dir,format_dest_dir,model_base,model_identifier,epochs):
     for epoch in epochs:
@@ -15,6 +13,7 @@ def merge_results(src_dir,format_dest_dir,model_base,model_identifier,epochs):
         if not os.path.exists(dest_dir):
             os.makedirs(dest_dir, exist_ok=True)
         images=os.listdir(source_dir)
+        print(len(images))
         for image in images:
             for label in image_labels:
                 if label in image:
@@ -67,24 +66,22 @@ def create_comparison(export_root, compare_dir, inclusion_keys=None,exclusion_ke
 #### Comment this section if you don't want 
 #### to load the images to the export_results folder
 model_base='real2op'
-epochs=['060','080']
-model_identifier='_vaegan_complex'
-root_src_dir="./results/{mb}{epoch}{mi}/test_latest/images/"
-root_dest_dir='./results/export_results/{mb}{epoch}{mi}/'
+epochs=['201']
+model_identifier='_reference_idt_full_A_to_B'
+root_src_dir="./results/inverse_results/{mb}{epoch}{mi}/test_latest/images/"
+root_dest_dir='./results/export_results/inverse/{mb}{epoch}{mi}/'
 merge_results(root_src_dir,root_dest_dir,model_base,model_identifier,epochs)
-"""
 model_base='real2op'
-epochs=[200,250,300,350]
-model_identifier='_vaegan_complex'
-root_src_dir="./results/{mb}{epoch}{mi}/test_latest/images/"
-root_dest_dir='./results/export_results/{mb}{epoch}{mi}/'
+epochs=['200']
+model_identifier='_reference_idt_full_B_to_A'
+root_src_dir="./results/inverse_results/{mb}{epoch}{mi}/test_latest/images/"
+root_dest_dir='./results/export_results/inverse/{mb}{epoch}{mi}/'
 merge_results(root_src_dir,root_dest_dir,model_base,model_identifier,epochs)
-"""
 #### Comment this section if you don't want
 #### to create the comparison images
-root_export='./results/export_results/'
-comparison_dir = root_export+"comparison_vaegan/"
+root_export='./results/export_results/inverse/'
+comparison_dir = root_export+"comparison_full_inverse/"
 os.makedirs(comparison_dir, exist_ok=True)
-include_dir_keys=['vaegan']
+include_dir_keys=['reference_idt_full']
 exclude_dir_keys=['comparison']
 create_comparison(root_export,comparison_dir,include_dir_keys,exclude_dir_keys)
