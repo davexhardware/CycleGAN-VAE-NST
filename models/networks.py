@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
-from .vae_nets import VAE,VAEGenerator,RESVAE,ResnetVAEGenerator
+from .vae_nets import VAE,VAEGenerator,ResnetVAEGenerator
 
 
 ###############################################################################
@@ -156,12 +156,10 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net = UnetGenerator(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'unet_256':
         net = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
-    elif netG== 'VAE1':
+    elif netG== 'ConVAE':
         net =VAE(latent_dim,in_channels=input_nc,img_size=img_size,norm_layer=norm_layer)
     elif netG== 'VAEGAN':
         net = VAEGenerator(input_nc, ngf, img_size, gpu_ids, latent_dim, norm_layer)
-    elif netG== 'RESVAE':
-        net= RESVAE(input_nc, ch= ngf, num_res_blocks=n_layers_G, latent_channels=latent_dim, norm_type=norm)
     elif netG== 'ResnetKVAE':
         net = ResnetVAEGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=n_layers_G,nz=latent_dim)
     else:

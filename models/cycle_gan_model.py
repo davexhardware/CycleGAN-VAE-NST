@@ -188,6 +188,7 @@ class CycleGANModel(BaseModel):
 
     def backward_G(self):
         """Calculate the loss for generators G_A and G_B"""
+        self.VAELoss()
         lambda_idt = self.opt.lambda_identity
         lambda_A = self.opt.lambda_A
         lambda_B = self.opt.lambda_B
@@ -226,7 +227,6 @@ class CycleGANModel(BaseModel):
         # G_A and G_B
         self.set_requires_grad([self.netD_A, self.netD_B], False)  # Ds require no gradients when optimizing Gs
         self.optimizer_G.zero_grad()  # set G_A and G_B's gradients to zero
-        self.VAELoss()
         self.backward_G()             # calculate gradients for G_A and G_B
         self.optimizer_G.step()       # update G_A and G_B's weights
         # D_A and D_B
@@ -237,6 +237,8 @@ class CycleGANModel(BaseModel):
         self.optimizer_D.step()  # update D_A and D_B's weights
 
     def VAELoss(self):
+        """ Calculate the reconstruction and the KL-divergence Loss for the VAE Generators
+        """
         if "VAE" in self.opt.netG:
             lambda_reconstruction = self.opt.lambda_rec
             lambda_kl = self.opt.lambda_kl
