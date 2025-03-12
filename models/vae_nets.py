@@ -127,8 +127,9 @@ class _Encoder(nn.Module):
         self.nc = nc
         self.nz = nz
         
-        # Last 2 convolutions, from a number of channels of ngf * 2 ** (imageSizeLog - 3) to nz (latent dimension),
-        # with a 4*4 filter (16 pixels) applied on a 4*4 image after the encoder's convolutions.
+        # Last 2 convolutions, from a number of channels of ngf * 2 ** (imageSizeLog - 3) 
+        # to nz (latent dimension) layers,
+        # with a 4*4 filter (16 pixels) applied on the encoder's output matrix.
         self.conv1 = nn.Conv2d(ngf * 2 ** (imageSizeLog - 3), nz, 4)
         self.conv2 = nn.Conv2d(ngf * 2 ** (imageSizeLog - 3), nz, 4)
 
@@ -136,13 +137,16 @@ class _Encoder(nn.Module):
         # input is (nc) x w **2
         self.encoder.add_module('input-conv', nn.Conv2d(nc, ngf, 4, 2, 1, bias=False))
         self.encoder.add_module('input-relu', nn.LeakyReLU(0.2, inplace=True))
-        for i in range(imageSizeLog - 3):  # i= 0, 1, ..., imageSizeLog-4
+        #After first convolution, w*h is halved, and the number of channels is ngf
+        # e.g. from 3*128*128 to 64*64*64
+        for i in range(imageSizeLog - 3):  # i= 0, 1, ..., imageSizeLog-4, e.g. imageSizeLog=7 (128*128) -> i=0,1,2,3
             # state size 
             self.encoder.add_module('conv-{}'.format(ngf * 2 ** i, ngf * 2 ** (i + 1)), nn.Conv2d(ngf * 2 ** (i), ngf * 2 ** (i + 1), 4, 2, 1, bias=False))
             self.encoder.add_module('batchnorm-{}'.format(ngf * 2 ** (i + 1)), norm_layer(ngf * 2 ** (i + 1)))
             self.encoder.add_module('relu-{}'.format(ngf * 2 ** (i + 1)), nn.LeakyReLU(0.2, inplace=True))
 
-        # state size. (ngf*2**(imageSizeLog-3)) x 4 x 4
+        # state size. (ngf*2**(imageSizeLog-3)) x 2**(imageSizeLog-5) x 4 x 4
+        # e.g. (64x16) x 4 x 4
 
     def forward(self, input):
         output = self.encoder(input)

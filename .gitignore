@@ -6,6 +6,7 @@ checkpoints/
 results/
 build/
 celeba/*
+datasets/**
 dist/
 *.zip
 **.pt
