@@ -1,0 +1,29 @@
+# data parameters
+dataset_name: real2op                         # used for saving csv. Easy to remember which dataset you're evalulating, especially, if you're using multiple datasets.
+dataset_with_subfolders: False               # True
+dataset_format: image                        # file_list # file_list is not implemented. I will implement it later. Easier to implement.
+multiple_evaluation: False
+generated_image_path: C:\Users\DavideSavoia\Documents\DeepProj\CycleGAN-VAE-NST\datasets\eval\real2op200\gene
+ground_truth_image_path: C:\Users\DavideSavoia\Documents\DeepProj\CycleGAN-VAE-NST\datasets\eval\real2op200\gt
+return_dataset_name: False                   # Currently, no use. In future, it will be used for multi-testing.
+
+
+# experiment
+exp_type: ablation
+model_name: ResNet-VAE200
+
+# processing parameters
+batch_size: 4                                # set according to your GPU/CPU
+image_shape: [ 128, 128, 3 ]                 # set according to your need.
+random_crop: False                           # currently, not implemented. In future, it will be used to evaluate patches.
+threads: 4                                   # set according to your CPU.
+
+# print option
+print_interval_frequency: 1
+show_config: False
+
+# save options
+save_results: True
+save_results_path: C:\Users\DavideSavoia\Documents\DeepProj\CycleGAN-VAE-NST\datasets\eval\real2op200\
+save_file_name: metrics
+save_type: csv
