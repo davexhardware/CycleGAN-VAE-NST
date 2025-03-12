@@ -30,6 +30,8 @@ Notice that the actual codebase differs from the original one, so commands or op
 
 For usage details, see the [tips](./docs/tips.md)
 
+<b>Evaluation Metrics from [Image-Quality-Evaluation-Metrics](https://github.com/SayedNadim/Image-Quality-Evaluation-Metrics)</b>
+
 ### Usage
 Look at the [CycleGAN.ipynb](./CycleGAN.ipynb) notebook to see how to train the VAEs.
 
